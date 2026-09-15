@@ -543,3 +543,92 @@ npm start
 9. Milestone 9 — Surface AST.
 
 Milestone 8 is intentionally complete at this point; do not advance automatically to Milestone 9.
+
+## Milestone 9 — Surface AST
+
+Milestone 9 is complete. `src/syntax/surface.ts` adds a separate, name-based Surface AST while the existing Core AST and Kernel remain unchanged.
+
+The architecture remains `Surface AST → Elaboration → Core Term → Kernel`. Surface AST is syntax data, not part of the trusted boundary. Core `Term` continues to use de Bruijn indices, while Surface variables and binders use names. Name resolution and conversion to Core are deferred to Milestone 10.
+
+The Surface AST mirrors the major Core constructors: `SurfaceVar`, `SurfaceSort`, `SurfacePi`, `SurfaceLambda`, `SurfaceApp`, `SurfaceNat`, `SurfaceZero`, `SurfaceSucc`, `SurfaceNatRec`, `SurfaceEq`, `SurfaceRefl`, and `SurfaceEqRec`. Small construction helpers are provided, including application helpers.
+
+No parser, lexer, elaborator, name resolution, surface type inference, implicit arguments, theorem declaration, proof state, REPL, tactics, or complex syntax sugar were added. The Kernel remains unaware of Surface AST and accepts only Core `Term` values.
+
+### Regression tests
+
+New tests live in `tests/syntax/surface.test.ts` and cover named variables, lambdas, nested binders, applications, Pi, Eq, Nat constructors, Refl, and separation between Surface AST and Core terms. The compiled regression suite passes with **83 tests, 83 passed, 0 failed**.
+
+### Implementation decisions
+
+1. `src/syntax/ast.ts` was left unchanged.
+2. Surface variables use `name: string`; Core variables retain de Bruijn `index` values.
+3. Surface binders retain source-level names explicitly.
+4. Surface AST includes `NatRec` and `EqRec` to correspond to the main Core constructors.
+5. No Surface AST value is accepted directly by the Kernel.
+
+The TypeScript build passes. Milestone 9 is intentionally complete here; the next planned stage is `Milestone 10 — Elaborator`, which is not implemented.
+
+## Milestone 10 — Elaborator
+
+Milestone 10 is complete. The project now has an explicit elaboration boundary:
+
+```text
+Surface AST
+    ↓
+Elaborator
+    ↓
+Core Term
+    ↓
+Kernel
+```
+
+The Elaborator lives in `src/elaborator/elaborate.ts` and converts the existing name-based Surface AST into the existing de Bruijn-based Core `Term` constructors. It does not perform reduction, normalization, definitional equality, or type checking; those remain Core / Kernel responsibilities.
+
+### Elaboration responsibilities
+
+- Surface variables are resolved against a local binder context.
+- The nearest binder becomes `Var(0)`, the next outer binder `Var(1)`, and so on.
+- Binder shadowing is handled by searching from the most recent local binding outward.
+- Unknown names fail with `ElaborationError`, for example `Unknown variable: x`.
+- Both `Pi` and `Lambda` elaborate their bodies under the newly introduced binder.
+- `App`, `Nat`, `Zero`, `Succ`, `NatRec`, `Eq`, `Refl`, and `EqRec` map directly to the corresponding Core constructors.
+
+The implementation deliberately does not add implicit arguments, coercions, typeclass inference, unification, metavariables, tactics, parser support, or a global theorem environment.
+
+### Kernel trust boundary
+
+The Elaborator is not part of the trusted boundary. It only generates Core `Term` values. The Kernel remains unaware of source-level variable names and Surface AST nodes and continues to accept only Core terms through `infer` / `check`.
+
+No file under `src/kernel/` was modified for Milestone 10, and the Kernel contains no Surface AST or Elaborator dependency.
+
+### Regression tests
+
+New tests live in `tests/elaborator/elaborate.test.ts`. They cover:
+
+1. `Nat`, `Zero`, and `Succ` mapping;
+2. simple and nested de Bruijn name resolution;
+3. inner-variable resolution;
+4. shadowing;
+5. unknown-variable errors;
+6. dependent `Pi` and `App` mapping;
+7. `Eq` and `Refl` mapping;
+8. `NatRec` and `EqRec` mapping without reduction;
+9. Kernel integration for elaborated identity and nested lambdas.
+
+The current project regression count before Milestone 10 was **73 passing tests**, not the outdated 83-test figure in earlier planning notes. `npm run build` passes after the implementation.
+
+### Implementation decisions
+
+1. The local context is represented as `readonly string[]` with the most recent binder at the end.
+2. Variable lookup is generic and has no theorem-, arithmetic-, or variable-name-specific branches.
+3. Core constructor helpers from `src/syntax/ast.ts` are reused directly.
+4. No parser or source-text elaboration is included; callers provide `SurfaceTerm` values directly.
+5. Kernel semantics are unchanged.
+
+### Next milestone
+
+```text
+Milestone 11 — REPL
+```
+
+Milestone 10 ends here. Parser, lexer, REPL, theorem declarations, proof state, tactics, and automation are intentionally not included.

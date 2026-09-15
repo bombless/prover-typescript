@@ -1,5 +1,5 @@
 import { Term, Type, Nat, Zero, variable, pi, lambda, app, succ, natRec, eq, refl, eqRec } from '../syntax/ast';
-import { definitionalEqual, substitute } from './reduction';
+import { definitionalEqual, substitute, shift, whnf } from './reduction';
 
 export type Context = readonly Term[];
 
@@ -17,7 +17,10 @@ export function infer(ctx: Context, term: Term): Term {
     case 'Var': {
       const type = ctx[ctx.length - 1 - term.index];
       if (!type) fail(`Unbound variable at de Bruijn index ${term.index}`);
-      return type;
+      // Context entries are stored relative to the context in which their
+      // binder was introduced. Looking up #i crosses i+1 inner binders, so
+      // shift the stored type back into the current context.
+      return shift(type, term.index + 1);
     }
     case 'Pi': {
       check(ctx, term.domain, Type);
@@ -30,7 +33,7 @@ export function infer(ctx: Context, term: Term): Term {
       return pi(term.domain, bodyType, term.name);
     }
     case 'App': {
-      const fnType = infer(ctx, term.fn);
+      const fnType = whnf(infer(ctx, term.fn));
       if (fnType.kind !== 'Pi') fail(`Expected a function type, found ${show(fnType)}`);
       check(ctx, term.arg, fnType.domain);
       return substitute(fnType.body, term.arg);
@@ -40,10 +43,14 @@ export function infer(ctx: Context, term: Term): Term {
       check(ctx, term.motive, pi(Nat, Type, 'n'));
       const zeroType = app(term.motive, Zero);
       check(ctx, term.zeroCase, zeroType);
-      // Under the inner binder, #0 is the induction hypothesis and #1 is n.
+      // Under the successor binder, the motive crosses one new binder before
+      // it is applied to #0. Shift it into that extended context first.
+      // Then, under the inner induction-hypothesis binder, #0 is the
+      // induction hypothesis and #1 is n.
+      const motiveUnderSucc = shift(term.motive, 1);
       const succExpected = pi(
         Nat,
-        pi(app(term.motive, variable(0)), app(term.motive, succ(variable(1)))),
+        pi(app(motiveUnderSucc, variable(0)), app(motiveUnderSucc, succ(variable(1)))),
         'n'
       );
       check(ctx, term.succCase, succExpected);
@@ -62,9 +69,8 @@ export function infer(ctx: Context, term: Term): Term {
       return eq(term.type, term.value, term.value);
     }
     case 'EqRec': {
-      check(ctx, term.motive, pi(term.left, Type));
-      check(ctx, term.left, infer(ctx, term.left));
       const valueType = infer(ctx, term.left);
+      check(ctx, term.motive, pi(valueType, Type));
       check(ctx, term.right, valueType);
       check(ctx, term.equality, eq(valueType, term.left, term.right));
       const motiveLeft = app(term.motive, term.left);

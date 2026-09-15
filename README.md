@@ -625,10 +625,34 @@ The current project regression count before Milestone 10 was **73 passing tests*
 4. No parser or source-text elaboration is included; callers provide `SurfaceTerm` values directly.
 5. Kernel semantics are unchanged.
 
-### Next milestone
+## Milestone 11 — REPL
+
+Milestone 11 is complete. The project now has a deliberately small source-text entry path:
 
 ```text
-Milestone 11 — REPL
+User input -> Parser -> Surface AST -> Elaborator -> Core Term -> Kernel -> type
 ```
 
-Milestone 10 ends here. Parser, lexer, REPL, theorem declarations, proof state, tactics, and automation are intentionally not included.
+The parser in `src/parser/parser.ts` uses a small hand-written tokenizer and covers `Nat`, numeric naturals, `0`, `Succ`, variables, application, dependent `Pi`, lambdas, `Eq`, and `Refl`. It produces only `SurfaceTerm` values and has no Kernel dependency.
+
+The REPL in `src/repl/repl.ts` separates line processing from the stdin/stdout loop. Each non-command line is parsed, elaborated, and Kernel-inferred independently. `exit` terminates the loop, EOF terminates normally, and parse/elaboration/Kernel errors are caught and labeled without stopping subsequent input.
+
+No global declaration environment, theorem declarations, proof states, tactics, automation, unification, metavariables, implicit arguments, or typeclass inference were added. No file under `src/kernel/` was modified for Milestone 11.
+
+Regression coverage now includes parser tests, REPL line/loop tests, and a source-to-Kernel integration test. The full suite is **88 passing tests**.
+
+The package entrypoint now points at the compiled `src/index.ts` output so `npm start` launches the REPL.
+
+## Milestone 12 — Named Definitions / Environment
+
+Milestone 12 adds a minimal persistent global environment above the Elaborator. The REPL now accepts `def name := term`, stores the Kernel-checked Core Term, and makes earlier definitions available to later term commands.
+
+```text
+def zero := 0
+def one := Succ zero
+one
+```
+
+Definitions are immutable within a REPL session: duplicate names are rejected, failed definitions are not inserted, and self-reference is not available while a definition is being elaborated. Local lexical bindings continue to take precedence over global definitions.
+
+The Kernel remains unchanged and continues to operate only on Core Terms. No theorem declarations, proof states, tactics, automation, unification, metavariables, implicit arguments, typeclass inference, recursive definitions, namespaces, modules, or imports were added.

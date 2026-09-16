@@ -63,11 +63,19 @@ test('apply creates explicit argument goals for a non-dependent function', () =>
   assert.equal(solved.proof().kind, 'App');
 });
 
-test('apply rejects result mismatches and dependent argument inference', () => {
+test('apply rejects result mismatches', () => {
   const wrong = { goals: [{ context: [{ name: 'h', type: pi(Nat, Nat, 'n') }], type: Type }] };
-  assert.throws(() => tacticSession(wrong).apply(variable(0, 'h')), /apply result mismatch/);
-  const dependent = { goals: [{ context: [{ name: 'h', type: pi(Nat, variable(0, 'n'), 'n') }], type: Nat }] };
-  assert.throws(() => tacticSession(dependent).apply(variable(0, 'h')), /does not support dependent/);
+  assert.throws(() => tacticSession(wrong).apply(variable(0, 'h')), /Cannot unify|result mismatch/);
+});
+
+test('M19 apply uses unification to solve a dependent theorem argument', () => {
+  const predicate = pi(Nat, Type, 'P');
+  const theoremType = pi(Nat, app(variable(1, 'P'), variable(0, 'n')), 'n');
+  const goalType = app(variable(1, 'P'), { kind: 'Zero' });
+  const state = { goals: [{ context: [{ name: 'P', type: predicate }, { name: 'h', type: theoremType }], type: goalType }] };
+  const session = tacticSession(state).apply(variable(0, 'h'));
+  assert.equal(session.state.goals.length, 0);
+  assert.equal(session.proof().kind, 'App');
 });
 
 test('failed tactics leave the original session unchanged', () => {

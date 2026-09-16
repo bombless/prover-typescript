@@ -259,4 +259,43 @@ npm test       -> 160 tests / 160 passed / 0 failed
 npm run build:web -> success
 ```
 
-UI-4 is complete for the audited capability scope. M19/M20/M21/M22 and UI-5/UI-6 are not started.
+UI-4 is complete for the audited capability scope. M19 is complete; M20/M21/M22 and UI-5/UI-6 are not started.
+
+## Milestone 19 — Unification
+
+M19 is complete. The Proof Engine now provides bounded unification for explicit theorem applications, reusing the M18 immutable `MetaContext` rather than adding a second metavariable infrastructure.
+
+The core path is:
+
+```text
+apply theorem
+    ↓
+metavariables for explicit Pi arguments
+    ↓
+unify theorem conclusion with the current goal
+    ↓
+MetaContext assignments
+    ↓
+explicit Core application
+    ↓
+TacticSession.proof()
+    ↓
+Kernel inference/check
+```
+
+M19 covers simple variable assignment, application and nested-application unification, constructor mismatch rejection, occurs check, scope safety, assignment stability, and failed-unification rollback. `apply` can solve an explicit dependent theorem argument from the goal and leaves unresolved explicit arguments as proof goals.
+
+The Kernel boundary is unchanged: `src/kernel/` was not modified, the Kernel does not understand metavariables, and final proof extraction still produces Core `Term` values that are checked by the Kernel.
+
+M19 does not implement implicit arguments, rewrite, induction, simp, ring, automation, typeclass inference, UI-5, or UI-6.
+
+### Verification
+
+```text
+npm run build      -> success
+npm test           -> 168 tests / 168 passed / 0 failed
+npm run build:web  -> success
+git diff --check   -> success
+```
+
+M19 is complete. Stop here; do not begin M20 automatically.

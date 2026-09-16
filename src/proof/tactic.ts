@@ -2,6 +2,8 @@ import { check, infer, show } from '../kernel/typecheck';
 import { definitionalEqual, shift, whnf } from '../kernel/reduction';
 import { Term, app, lambda, refl, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
+import { MetaContext } from './metavariable/meta';
+import { UnificationError, UnificationTerm, substituteUnification, unify } from './unification';
 
 export class TacticError extends Error {
   constructor(message: string) { super(message); this.name = 'TacticError'; }
@@ -24,20 +26,6 @@ function replaceNode(root: ProofNode, id: GoalId, replacement: ProofNode): Proof
   if (root.kind === 'term') return root;
   if (root.kind === 'lambda') return { ...root, body: replaceNode(root.body, id, replacement) };
   return { kind: 'app', fn: replaceNode(root.fn, id, replacement), arg: replaceNode(root.arg, id, replacement) };
-}
-
-function containsBoundZero(term: Term, depth = 0): boolean {
-  switch (term.kind) {
-    case 'Var': return term.index === depth;
-    case 'Type': case 'Nat': case 'Zero': return false;
-    case 'Pi': case 'Lambda': return containsBoundZero(term.domain, depth) || containsBoundZero(term.body, depth + 1);
-    case 'App': return containsBoundZero(term.fn, depth) || containsBoundZero(term.arg, depth);
-    case 'Succ': return containsBoundZero(term.value, depth);
-    case 'NatRec': return containsBoundZero(term.motive, depth) || containsBoundZero(term.zeroCase, depth) || containsBoundZero(term.succCase, depth) || containsBoundZero(term.scrutinee, depth);
-    case 'Eq': return containsBoundZero(term.type, depth) || containsBoundZero(term.left, depth) || containsBoundZero(term.right, depth);
-    case 'Refl': return containsBoundZero(term.type, depth) || containsBoundZero(term.value, depth);
-    case 'EqRec': return containsBoundZero(term.motive, depth) || containsBoundZero(term.reflCase, depth) || containsBoundZero(term.left, depth) || containsBoundZero(term.right, depth) || containsBoundZero(term.equality, depth);
-  }
 }
 
 function compile(root: ProofNode, depth = 0): Term {
@@ -131,20 +119,39 @@ export class TacticSession {
     let currentType: Term;
     try { currentType = whnf(infer(contextTypes(hole.goal.context), term)); }
     catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
-    const argumentTypes: Term[] = [];
+
+    let metaContext = MetaContext.empty();
+    const argumentsForProof: Array<{ readonly type: Term; readonly meta: UnificationTerm }> = [];
     while (currentType.kind === 'Pi') {
-      if (containsBoundZero(currentType.body)) throw new TacticError('apply does not support dependent function arguments in M17');
-      argumentTypes.push(currentType.domain);
-      currentType = whnf(currentType.body);
+      const created = metaContext.create(hole.goal.context.length, currentType.domain);
+      metaContext = created.context;
+      argumentsForProof.push({ type: currentType.domain, meta: created.term });
+      currentType = whnf(substituteUnification(currentType.body, created.term) as Term);
     }
-    if (!definitionalEqual(currentType, hole.goal.type)) throw new TacticError(`apply result mismatch: expected ${show(hole.goal.type)}, found ${show(currentType)}`);
-    if (argumentTypes.length === 0) throw new TacticError(`apply expected a function, found ${show(currentType)}`);
-    const childHoles = argumentTypes.map((type) => {
-      const childGoal = goal(hole.goal.context, type);
-      return { id: childGoal.id!, goal: childGoal, depth: hole.depth };
-    });
+    if (argumentsForProof.length === 0) throw new TacticError(`apply expected a function, found ${show(currentType)}`);
+
+    try { metaContext = unify(currentType, hole.goal.type, metaContext); }
+    catch (error) {
+      if (error instanceof UnificationError) throw new TacticError(error.message);
+      throw new TacticError(error instanceof Error ? error.message : String(error));
+    }
+
+    const childHoles: Hole[] = [];
+    const argumentNodes: ProofNode[] = [];
+    for (const argument of argumentsForProof) {
+      const resolved = metaContext.resolve((argument.meta as { kind: 'meta'; id: number }).id);
+      if (resolved.kind === 'term') {
+        argumentNodes.push({ kind: 'term', term: resolved.term, depth: hole.depth });
+      } else {
+        const childGoal = goal(hole.goal.context, argument.type);
+        const child = { id: childGoal.id!, goal: childGoal, depth: hole.depth };
+        childHoles.push(child);
+        argumentNodes.push({ kind: 'hole', id: child.id });
+      }
+    }
+
     let node: ProofNode = { kind: 'term', term, depth: hole.depth };
-    for (const child of childHoles) node = { kind: 'app', fn: node, arg: { kind: 'hole', id: child.id } };
+    for (const argumentNode of argumentNodes) node = { kind: 'app', fn: node, arg: argumentNode };
     return this.withReplacement(hole.id, childHoles, replaceNode(this.root, hole.id, node));
   }
 

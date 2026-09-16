@@ -78,15 +78,15 @@ by parser
 
 本阶段没有向 `src/kernel/` 添加 ProofState、Tactic、GoalId、Case 或 metavariable 依赖。Case / focus / goal identity 全部停留在 Proof Engine 层；proof extraction 后仍形成 Core `Term` 并交给 Kernel。
 
-## 下一阶段
+## Post-M19 next stage
 
-下一阶段仍为：
+下一阶段才是：
 
 ```text
-M19 — Unification
+M20 — Implicit Arguments
 ```
 
-本上下文到此停止，不自动开始 M19。
+M19 已完成；不自动开始 M20。
 
 ## UI-2 — Mock Proof Interaction — complete
 
@@ -217,3 +217,42 @@ M22 Induction
 UI-5
 UI-6
 ```
+
+## M19 — Unification — complete
+
+M19 adds bounded proof-engine unification for explicit theorem applications.
+
+```text
+apply theorem
+    ↓
+metavariables for explicit Pi arguments
+    ↓
+unify theorem conclusion with current goal
+    ↓
+MetaContext assignments
+    ↓
+explicit Core application
+    ↓
+TacticSession.proof()
+    ↓
+Kernel inference/check
+```
+
+Implemented and tested: simple variable assignment, application and nested-application unification, constructor mismatch rejection, occurs check, scope safety, assignment stability, and failed-unification rollback.
+
+`apply` can now solve an explicit dependent theorem argument from the current goal, while unresolved explicit arguments remain as proof goals. This does not implement implicit arguments.
+
+M19 reuses the M18 `MetaContext` infrastructure and does not modify `src/kernel/`. Metavariables and unification remain in the Proof Engine; extracted proofs are Core `Term` values checked by the Kernel.
+
+M19 does not implement implicit arguments, rewrite, induction, simp, ring, automation, typeclass inference, UI-5, or UI-6.
+
+### Verification
+
+```text
+npm run build      -> success
+npm test           -> 168 tests / 168 passed / 0 failed
+npm run build:web  -> success
+git diff --check   -> success
+```
+
+M19 is complete. Stop here; do not begin M20 automatically.

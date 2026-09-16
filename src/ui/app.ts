@@ -49,6 +49,11 @@ function selectExercise(exercise: Exercise): void {
   statusKind = "neutral";
   statusMessage = "Real Proof Engine";
   render();
+  const input = root.querySelector<HTMLInputElement>("#tactic-input");
+  if (input) {
+    input.focus();
+    input.select();
+  }
 }
 
 function renderGoals(): string {

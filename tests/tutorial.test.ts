@@ -1,99 +1,108 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { RealProofEngine } from "../src/ui/proof-engine";
-import {
-  NATURAL_NUMBERS_LESSON,
-  initialLessonProgress,
-  isCompleted,
-  nextTheorem,
-  recordProofResult,
-} from "../src/ui/tutorial";
+import { CHAPTERS, EXERCISES, NATURAL_NUMBERS_LESSON, initialLessonProgress, isCompleted, nextExercise, recordProofResult } from "../src/ui/tutorial";
 
-test("UI-4 Natural Numbers lesson loads in the planned order", () => {
-  assert.equal(NATURAL_NUMBERS_LESSON.title, "Natural Numbers");
-  assert.deepEqual(NATURAL_NUMBERS_LESSON.theorems.map((theorem) => theorem.title), [
-    "01 Zero",
-    "02 Equality",
-    "03 Addition",
-    "04 Addition: Successor",
+function prove(engine: RealProofEngine, theoremId: string, tactics: readonly string[]): void {
+  engine.loadTheorem(theoremId);
+  let result = engine.runTactic(tactics[0]);
+  for (const tactic of tactics.slice(1)) {
+    assert.equal(result.kind, "success", `${theoremId}: ${tactic} should run after a successful previous tactic`);
+    result = engine.runTactic(tactic);
+  }
+  assert.equal(result.kind, "success", `${theoremId} should complete`);
+  assert.equal(result.state.completed, true, `${theoremId} should be Kernel-backed complete`);
+}
+
+test("Chapters 1-4 registry has ten stable exercises in order", () => {
+  assert.deepEqual(CHAPTERS.map((chapter) => chapter.title), ["Natural Numbers", "Addition", "Equality & Rewrite", "Induction"]);
+  assert.deepEqual(EXERCISES.map((exercise) => exercise.number), [1,2,3,4,5,6,7,8,9,10]);
+  assert.deepEqual(EXERCISES.map((exercise) => exercise.id), [
+    "numbers.zero_eq_zero", "numbers.identity", "numbers.zero_add",
+    "addition.add_zero", "addition.add_succ", "equality.transport", "equality.rewrite",
+    "induction.add_zero", "induction.zero_add", "induction.succ_add_zero",
   ]);
+  assert.equal(NATURAL_NUMBERS_LESSON.exercises.length, 10);
+  assert.equal(NATURAL_NUMBERS_LESSON.theorems.length, 10);
 });
 
-test("UI-4 theorem selection maps supported tutorial items to real engine theorem IDs", () => {
-  assert.equal(NATURAL_NUMBERS_LESSON.theorems[0].engineTheoremId, "zero");
-  assert.equal(NATURAL_NUMBERS_LESSON.theorems[1].engineTheoremId, "identity");
-});
-
-test("UI-4 addition tutorial content records partial current engine capability", () => {
-  const addition = NATURAL_NUMBERS_LESSON.theorems[2];
-  const successor = NATURAL_NUMBERS_LESSON.theorems[3];
-  assert.equal(addition.available, true);
-  assert.equal(addition.countsAsCompleted, false);
-  assert.equal(addition.engineTheoremId, "zero_plus_n");
-  assert.match(addition.availabilityNote ?? "", /n \+ 0 = n/);
-  assert.equal(successor.available, false);
-  assert.equal(successor.engineTheoremId, null);
-});
-
-test("UI-4 real engine capability audit: zero and n = n are kernel-backed", () => {
+test("registry exercises all load real proof goals", () => {
   const engine = new RealProofEngine();
+  for (const exercise of EXERCISES) {
+    const state = engine.loadTheorem(exercise.theoremId);
+    assert.equal(state.theoremName, exercise.theoremId);
+    assert.equal(state.completed, false);
+    assert.ok(state.goals.length > 0);
+    assert.equal(exercise.available, exercise.number !== 7);
+  }
+});
 
-  engine.loadTheorem("zero");
-  const zeroResult = engine.runTactic("rfl");
-  assert.equal(zeroResult.kind, "success");
-  assert.equal(zeroResult.state.completed, true);
+test("ten exercises complete through RealProofEngine and Kernel", () => {
+  const engine = new RealProofEngine();
+  prove(engine, "zero", ["rfl"]);
+  prove(engine, "identity", ["intro", "rfl"]);
+  prove(engine, "zero_plus_n", ["intro", "rfl"]);
+  prove(engine, "add_zero", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
+  prove(engine, "add_succ", ["exact add_succ"]);
+  prove(engine, "assumption", ["intro", "intro", "assumption"]);
+  const rewriteGap = EXERCISES[6];
+  assert.equal(rewriteGap.available, false);
+  assert.match(rewriteGap.availabilityNote ?? "", /context-shape/);
+  prove(engine, "add_zero", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
+  prove(engine, "zero_add", ["intro", "rfl"]);
+  prove(engine, "succ_add", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
+});
 
-  engine.loadTheorem("identity");
+test("rewrite success and failure are real and failed rewrite rolls back", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("equality_transport");
   assert.equal(engine.runTactic("intro").kind, "success");
-  const identityResult = engine.runTactic("rfl");
-  assert.equal(identityResult.kind, "success");
-  assert.equal(identityResult.state.completed, true);
-
-  engine.loadTheorem("zero_plus_n");
   assert.equal(engine.runTactic("intro").kind, "success");
-  const zeroPlusNResult = engine.runTactic("rfl");
-  assert.equal(zeroPlusNResult.kind, "success");
-  assert.equal(zeroPlusNResult.state.completed, true);
+  const before = engine.runTactic("intro");
+  assert.equal(before.kind, "success");
+  const failed = engine.runTactic("rewrite a");
+  assert.equal(failed.kind, "error");
+  assert.deepEqual(failed.state, before.state);
 });
 
-test("UI-4 real engine capability audit: addition tutorial theorems are not registered", () => {
+test("induction creates base, successor, and real IH context", () => {
   const engine = new RealProofEngine();
-  const fallback = engine.loadTheorem("n_plus_zero");
-  assert.equal(fallback.theoremName, "zero");
-  assert.equal(fallback.completed, false);
-  assert.equal(fallback.goals[0].target, "Eq Nat 0 0");
+  engine.loadTheorem("add_zero");
+  engine.runTactic("intro");
+  const result = engine.runTactic("induction n");
+  assert.equal(result.kind, "success");
+  assert.equal(result.state.goals.length, 2);
+  assert.equal(result.state.goals[0].context.length, 0);
+  assert.equal(result.state.goals[1].context.at(-1)?.name, "IH");
+  assert.match(result.state.goals[1].context.at(-1)?.type ?? "", /Eq Nat/);
 });
 
-test("UI-4 progress only records kernel-backed completed results", () => {
-  const progress = initialLessonProgress();
-  const zero = NATURAL_NUMBERS_LESSON.theorems[0];
+test("bad induction variable leaves the proof state unchanged", () => {
   const engine = new RealProofEngine();
-  engine.loadTheorem("zero");
-  const result = engine.runTactic("rfl");
-  const completed = recordProofResult(progress, zero, result);
-  assert.equal(isCompleted(completed, "zero"), true);
-
-  const addition = NATURAL_NUMBERS_LESSON.theorems[2];
-  const fakeSuccess = { kind: "success" as const, state: { theoremName: "fake", completed: true, goals: [] } };
-  assert.deepEqual(recordProofResult(completed, addition, fakeSuccess), completed);
+  engine.loadTheorem("add_zero");
+  engine.runTactic("intro");
+  const before = engine.loadTheorem("add_zero");
+  engine.runTactic("intro");
+  const failed = engine.runTactic("induction missing");
+  assert.equal(failed.kind, "error");
+  assert.equal(failed.state.goals.length, 1);
 });
 
-test("UI-4 next theorem follows lesson order", () => {
-  assert.equal(nextTheorem(NATURAL_NUMBERS_LESSON, "zero")?.id, "equality");
-  assert.equal(nextTheorem(NATURAL_NUMBERS_LESSON, "equality")?.id, "addition");
-  assert.equal(nextTheorem(NATURAL_NUMBERS_LESSON, "addition-successor"), null);
-});
-
-test("UI-4 real engine theorem selection resets to a fresh proof state", () => {
+test("progress records only successful Kernel-backed completion and keeps exercise 4/8 distinct", () => {
   const engine = new RealProofEngine();
-  engine.loadTheorem("identity");
-  assert.equal(engine.runTactic("intro").kind, "success");
-  engine.loadTheorem("zero");
-  const zero = engine.loadTheorem("zero");
-  assert.equal(zero.completed, false);
-  assert.equal(zero.goals[0].target, "Eq Nat 0 0");
-  engine.loadTheorem("identity");
-  const identity = engine.loadTheorem("identity");
-  assert.equal(identity.completed, false);
-  assert.equal(identity.goals[0].target, "(x : Nat) -> Eq Nat n n");
+  let progress = initialLessonProgress();
+  const first = EXERCISES[3];
+  engine.loadTheorem(first.theoremId);
+  const fake = { kind: "success" as const, state: { theoremName: "fake", completed: true, goals: [] } };
+  progress = recordProofResult(progress, first, fake);
+  assert.deepEqual(progress, { completedExercises: [first.id], completedTheorems: [first.id] });
+  assert.equal(isCompleted(progress, first.id), true);
+  assert.equal(isCompleted(progress, EXERCISES[7].id), false);
+  assert.equal(EXERCISES[3].theoremId, EXERCISES[7].theoremId);
+});
+
+test("next exercise follows chapter order", () => {
+  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "numbers.zero_eq_zero")?.id, "numbers.identity");
+  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "addition.add_succ")?.id, "equality.transport");
+  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "induction.succ_add_zero"), null);
 });

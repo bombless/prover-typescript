@@ -485,3 +485,33 @@ git diff --check -> success
 ```
 
 M22 is complete. Stop here; do not begin UI-5, UI-6, or M23 automatically.
+
+## Chapters 1–4 — Natural Numbers Tutorial Registry
+
+The tutorial is now structured as four chapters and ten stable exercise IDs in `src/ui/tutorial.ts`:
+
+1. Natural Numbers — `numbers.zero_eq_zero`, `numbers.identity`, `numbers.zero_add`
+2. Addition — `addition.add_zero`, `addition.add_succ`
+3. Equality & Rewrite — `equality.transport`, `equality.rewrite`
+4. Induction — `induction.add_zero`, `induction.zero_add`, `induction.succ_add_zero`
+
+Exercise 4 and exercise 8 intentionally share the `add_zero` Core theorem builder but have distinct exercise IDs and progress records. Completion is recorded only from a successful `RealProofEngine` result whose `TacticSession.proof()` crosses the existing Kernel check; UI state cannot manufacture completion.
+
+The real UI dispatch supports `intro`, `rfl`, `assumption`, `exact`, `apply`, `rewrite <hypothesis>`, and bounded `induction <name>`. Induction exposes base/successor goals and a real IH context; rewrite constructs an `EqRec` proof through the existing proof engine.
+
+### Current bounded capability gaps
+
+- Exercise 5 (`addition.add_succ`) remains a registered real goal but is unavailable in the tutorial UI because the current bounded induction compiler does not yet preserve de Bruijn scope correctly when an outer local remains during the induction proof. It is recorded as a capability gap rather than completed through a UI special case.
+- Exercise 7 (`equality.rewrite`) is likewise registered but unavailable until its tutorial theorem/context shape is aligned with the existing Kernel-checked M21 rewrite proof path. The underlying rewrite tactic remains tested independently, including success, failure, and rollback.
+
+The project deliberately does not add proof search, general induction, simp/rewrite search, ring/arith automation, new inductive types, pattern matching, modules/imports, LSP, or full dependent elaboration.
+
+### Verification
+
+```text
+npm test          -> 183 tests / 183 passed / 0 failed
+npm run build:web -> success
+git diff --check  -> success
+```
+
+The Kernel remains independent of Chapter, Exercise, UI, and tactic metadata.

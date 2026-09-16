@@ -235,7 +235,14 @@ export class TacticSession {
     try { infer(contextTypes(hole.goal.context), hole.goal.type); }
     catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
 
-    const motive = lambda(Nat, abstractInductionVariable(hole.goal.type, index), variableName);
+    // Context entries are presented oldest-to-newest, while Core variables
+    // use de Bruijn indices newest-to-oldest. The newest local binder
+    // therefore has Core index 0, even when it is at context position > 0.
+    // Passing the presentation position here accidentally abstracted an
+    // outer variable (for example `m` in `m, n`), producing an invalid
+    // motive for `add_succ`.
+    const targetIndex = hole.goal.context.length - 1 - index;
+    const motive = lambda(Nat, abstractInductionVariable(hole.goal.type, targetIndex), variableName);
     const baseType = normalize(app(motive, Zero));
     const successorTarget = normalize(app(motive, succ(variable(1, variableName))));
     const baseContext = hole.goal.context.slice(0, -1);
@@ -252,7 +259,7 @@ export class TacticSession {
     const root = replaceNode(this.root, hole.id, {
       kind: 'natRec',
       motive,
-      scrutinee: variable(index, variableName),
+      scrutinee: variable(targetIndex, variableName),
       zeroCase: { kind: 'hole', id: baseHole.id },
       succCase: { kind: 'hole', id: successorHole.id },
     });

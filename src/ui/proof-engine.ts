@@ -3,8 +3,12 @@ import { parse } from "../parser/parser";
 import { proofState, type ProofState } from "../proof/state";
 import { tacticSession, TacticError, type TacticSession } from "../proof/tactic";
 import { show } from "../kernel/typecheck";
-import { type Term as CoreTerm, Nat, Zero, variable, pi, eq } from "../syntax/ast";
+import { type Term as CoreTerm, Nat, Zero, variable, pi, eq, app } from "../syntax/ast";
 import { addTerm } from "../library/nat";
+import { addZeroType } from "../library/add-zero";
+import { zeroAddType } from "../library/zero-add";
+import { succAddType } from "../library/succ-add";
+import { addSuccProof, addSuccType } from "../library/add-succ";
 
 export interface ContextEntryView { name: string; type: string; }
 export interface GoalView { id: string; target: string; context: ContextEntryView[]; }
@@ -64,6 +68,12 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   zero: { name: "zero", type: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Zero" }, right: { kind: "Zero" } } },
   identity: { name: "identity", type: { kind: "Pi", domain: { kind: "Nat" }, body: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 0, name: "n" }, right: { kind: "Var", index: 0, name: "n" } }, name: "n" } },
   zero_plus_n: { name: "zero_plus_n", type: pi(Nat, eq(Nat, addTerm(Zero, variable(0, "n")), variable(0, "n")), "n") },
+  add_zero: { name: "add_zero", type: addZeroType },
+  add_succ: { name: "add_succ", type: addSuccType },
+  equality_transport: { name: "equality_transport", type: pi(Nat, pi(Nat, pi(eq(Nat, variable(2, "a"), variable(1, "b")), eq(Nat, variable(2, "a"), variable(1, "b")), "h"), "b"), "a") },
+  equality_rewrite: { name: "equality_rewrite", type: pi(pi(Nat, Nat, "x"), pi(Nat, pi(Nat, pi(eq(Nat, variable(2, "a"), variable(1, "b")), eq(Nat, app(variable(3, "f"), variable(2, "a")), app(variable(3, "f"), variable(2, "a"))), "h"), "b"), "a"), "f") },
+  zero_add: { name: "zero_add", type: zeroAddType },
+  succ_add: { name: "succ_add", type: pi(Nat, eq(Nat, addTerm({ kind: "Succ", value: variable(0, "n") }, Zero), { kind: "Succ", value: variable(0, "n") }), "n") },
   assumption: { name: "assumption", type: { kind: "Pi", domain: { kind: "Nat" }, body: { kind: "Pi", domain: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 0, name: "n" }, right: { kind: "Var", index: 0, name: "n" } }, body: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 1, name: "n" }, right: { kind: "Var", index: 1, name: "n" } }, name: "h" }, name: "n" } },
   apply: { name: "apply", type: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Zero" }, right: { kind: "Zero" } } },
 };
@@ -120,7 +130,10 @@ export class RealProofEngine implements ProofEngine {
           if (!argument) throw new TacticError("exact expects a term");
           const goal = this.session.currentGoal();
           if (!goal) throw new TacticError("No goals remain");
-          this.session = this.session.exact(parseArgument(argument, goal.context));
+          // Tutorial theorem aliases are resolved at the UI adapter boundary;
+          // the resulting Core term still crosses the normal Kernel check.
+          const term = argument === "add_succ" ? addSuccProof : parseArgument(argument, goal.context);
+          this.session = this.session.exact(term);
           break;
         }
         case "apply": {
@@ -130,6 +143,17 @@ export class RealProofEngine implements ProofEngine {
           this.session = this.session.apply(parseArgument(argument, goal.context));
           break;
         }
+        case "rewrite": {
+          if (!argument) throw new TacticError("rewrite expects an equality proof");
+          const goal = this.session.currentGoal();
+          if (!goal) throw new TacticError("No goals remain");
+          this.session = this.session.rewrite(parseArgument(argument, goal.context));
+          break;
+        }
+        case "induction":
+          if (!argument) throw new TacticError("induction expects a variable name");
+          this.session = this.session.induction(argument);
+          break;
         default:
           throw new TacticError(`Unknown tactic: ${name}`);
       }

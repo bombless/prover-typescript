@@ -87,16 +87,30 @@ test("bad induction variable leaves the proof state unchanged", () => {
 });
 
 test("progress records only successful Kernel-backed completion and keeps exercise 4/8 distinct", () => {
-  const engine = new RealProofEngine();
   let progress = initialLessonProgress();
-  const first = EXERCISES[3];
-  engine.loadTheorem(first.theoremId);
-  const fake = { kind: "success" as const, state: { theoremName: "fake", completed: true, goals: [] } };
-  progress = recordProofResult(progress, first, fake);
-  assert.deepEqual(progress, { completedExercises: [first.id], completedTheorems: [first.id] });
-  assert.equal(isCompleted(progress, first.id), true);
-  assert.equal(isCompleted(progress, EXERCISES[7].id), false);
-  assert.equal(EXERCISES[3].theoremId, EXERCISES[7].theoremId);
+  const exercise4 = EXERCISES[3];
+  const exercise8 = EXERCISES[7];
+  const complete = { kind: "success" as const, state: { theoremName: "fake", completed: true, goals: [] } };
+
+  assert.notEqual(exercise4.id, exercise8.id);
+  assert.equal(exercise4.theoremId, "add_zero");
+  assert.equal(exercise8.theoremId, "add_zero");
+
+  // Acceptance case 1: completing Exercise 4 must not complete Exercise 8.
+  progress = recordProofResult(progress, exercise4, complete);
+  assert.deepEqual(progress, { completedExercises: [exercise4.id], completedTheorems: [exercise4.id] });
+  assert.equal(isCompleted(progress, exercise4.id), true);
+  assert.equal(isCompleted(progress, exercise8.id), false);
+
+  // Acceptance case 2: completing Exercise 8 adds only its own ID and preserves
+  // Exercise 4 as an independently represented completed exercise.
+  progress = recordProofResult(progress, exercise8, complete);
+  assert.deepEqual(progress, {
+    completedExercises: [exercise4.id, exercise8.id],
+    completedTheorems: [exercise4.id, exercise8.id],
+  });
+  assert.equal(isCompleted(progress, exercise4.id), true);
+  assert.equal(isCompleted(progress, exercise8.id), true);
 });
 
 test("next exercise follows chapter order", () => {

@@ -1,5 +1,5 @@
 import "./styles.css";
-import { RealProofEngine, TACTICS, type DisplayProofState, type ProofStateView } from "./proof-engine";
+import { RealProofEngine, REAL_THEOREM_LIST, TACTICS, type DisplayProofState, type ProofStateView } from "./proof-engine";
 import { NATURAL_NUMBERS_LESSON, initialLessonProgress, initialTheoremState, isCompleted, nextExercise, recordProofResult, type Exercise } from "./tutorial";
 
 const app = document.querySelector<HTMLDivElement>("#app");

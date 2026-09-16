@@ -71,7 +71,7 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   add_zero: { name: "add_zero", type: addZeroType },
   add_succ: { name: "add_succ", type: addSuccType },
   equality_transport: { name: "equality_transport", type: pi(Nat, pi(Nat, pi(eq(Nat, variable(2, "a"), variable(1, "b")), eq(Nat, variable(2, "a"), variable(1, "b")), "h"), "b"), "a") },
-  equality_rewrite: { name: "equality_rewrite", type: pi(pi(Nat, Nat, "x"), pi(Nat, pi(Nat, pi(eq(Nat, variable(2, "a"), variable(1, "b")), eq(Nat, app(variable(3, "f"), variable(2, "a")), app(variable(3, "f"), variable(2, "a"))), "h"), "b"), "a"), "f") },
+  equality_rewrite: { name: "equality_rewrite", type: pi(pi(Nat, Nat, "x"), pi(Nat, pi(Nat, pi(eq(Nat, variable(1, "a"), variable(0, "b")), eq(Nat, app(variable(3, "f"), variable(2, "a")), app(variable(3, "f"), variable(2, "a"))), "h"), "b"), "a"), "f") },
   zero_add: { name: "zero_add", type: zeroAddType },
   succ_add: { name: "succ_add", type: pi(Nat, eq(Nat, addTerm({ kind: "Succ", value: variable(0, "n") }, Zero), { kind: "Succ", value: variable(0, "n") }), "n") },
   assumption: { name: "assumption", type: { kind: "Pi", domain: { kind: "Nat" }, body: { kind: "Pi", domain: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 0, name: "n" }, right: { kind: "Var", index: 0, name: "n" } }, body: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 1, name: "n" }, right: { kind: "Var", index: 1, name: "n" } }, name: "h" }, name: "n" } },

@@ -33,7 +33,7 @@ test("registry exercises all load real proof goals", () => {
     assert.equal(state.theoremName, exercise.theoremId);
     assert.equal(state.completed, false);
     assert.ok(state.goals.length > 0);
-    assert.equal(exercise.available, exercise.number !== 7);
+    assert.equal(exercise.available, true);
   }
 });
 
@@ -45,9 +45,7 @@ test("ten exercises complete through RealProofEngine and Kernel", () => {
   prove(engine, "add_zero", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
   prove(engine, "add_succ", ["exact add_succ"]);
   prove(engine, "assumption", ["intro", "intro", "assumption"]);
-  const rewriteGap = EXERCISES[6];
-  assert.equal(rewriteGap.available, false);
-  assert.match(rewriteGap.availabilityNote ?? "", /context-shape/);
+  prove(engine, "equality_rewrite", ["intro", "intro", "intro", "intro", "rewrite h", "rfl"]);
   prove(engine, "add_zero", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
   prove(engine, "zero_add", ["intro", "rfl"]);
   prove(engine, "succ_add", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);

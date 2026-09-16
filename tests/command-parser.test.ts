@@ -23,3 +23,19 @@ test('command parser rejects malformed definitions', () => {
   assert.throws(() => parseCommand('def x = 0'), /Expected 'def name := term'/);
   assert.throws(() => parseCommand('def x :='), /Expected a term after :=/);
 });
+
+test('command parser reads theorem declarations', () => {
+  const command = parseCommand('theorem id : (A : Type) -> (x : A) -> A := (A : Type) => (x : A) => x');
+  assert.equal(command.kind, 'theorem');
+  if (command.kind !== 'theorem') return;
+  assert.equal(command.name, 'id');
+  assert.equal(command.proposition.kind, 'Pi');
+  assert.equal(command.proof.kind, 'Lambda');
+});
+
+test('command parser rejects malformed theorem declarations', () => {
+  assert.throws(() => parseCommand('theorem id'), /Expected 'theorem name : proposition := proof'/);
+  assert.throws(() => parseCommand('theorem 1id : Nat := 0'), /Invalid theorem name/);
+  assert.throws(() => parseCommand('theorem id :='), /Expected 'theorem name : proposition := proof'/);
+  assert.throws(() => parseCommand('theorem id : Nat :='), /Expected a proof after :=/);
+});

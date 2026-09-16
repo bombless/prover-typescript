@@ -14,4 +14,5 @@ test('environment rejects duplicate definitions', () => {
   const environment = new GlobalEnvironment();
   environment.define('zero', Zero);
   assert.throws(() => environment.define('zero', Nat), EnvironmentError);
+  assert.equal(environment.lookup('zero'), Zero);
 });

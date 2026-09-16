@@ -146,6 +146,28 @@ npm test      -> 130 tests / 130 passed / 0 failed
 ```
 
 M18 is complete. Stop here; do not begin M19 automatically.
+## Post-M18 — Multi-Goal / Case / Proof UX
+
+The Proof Engine now has a reliable multi-goal workflow without adding proof semantics to the Kernel.
+
+`src/proof/state.ts` provides stable goal identity, explicit focus, navigation, immutable replacement, and optional case metadata. Goal identity and case names are Proof Engine/UI metadata only.
+
+`src/proof/tactic.ts` now executes `intro`, `exact`, `rfl`, `assumption`, and the existing bounded `apply` against the focused goal. Successful completion removes only that goal and advances focus to the next pending goal; failed tactics leave the session unchanged. Completed proof terms are still rechecked by the Kernel.
+
+`src/repl/repl.ts` provides `formatProofState`, showing numbered goals, focus, local context, targets, case labels, and the explicit completed-proof state.
+
+This stage does **not** implement unification, implicit arguments, rewrite, induction semantics, simp, ring, Int, user-defined inductives, pattern matching, modules, imports, LSP, or `by` parsing.
+
+### Verification
+
+```text
+npm run build -> success
+npm test      -> 139 tests / 139 passed / 0 failed
+```
+
+No `src/kernel/` dependency on ProofState, Tactic, GoalId, Case, or metavariables was added.
+
+The next planned milestone remains M19 — Unification. Do not begin it automatically.
 
 ## UI-1 — Web Shell
 

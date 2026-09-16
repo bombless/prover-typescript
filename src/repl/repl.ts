@@ -1,11 +1,21 @@
 import readline from 'node:readline';
 import { elaborate } from '../elaborator/elaborate';
-import { infer, show } from '../kernel/typecheck';
+import { check, infer, show } from '../kernel/typecheck';
 import { GlobalEnvironment, Environment } from '../environment/environment';
 import { parseCommand } from '../parser/command';
+import { ProofState } from '../proof/state';
 
 export const EXIT_COMMAND = 'exit';
 
+export function formatProofState(state: ProofState): string {
+  if (state.goals.length === 0) return 'No goals.\nProof complete.';
+  return ['Goals:', ...state.goals.map((goal, index) => {
+    const focused = goal.id === state.focusedGoalId ? '▶ ' : '  ';
+    const header = `${focused}Goal ${index + 1}${goal.caseName ? ` (${goal.caseName})` : ''}`;
+    const context = goal.context.map(entry => `  ${entry.name} : ${show(entry.type)}`);
+    return [header, ...context, `  ⊢ ${show(goal.type)}`].join('\n');
+  })].join('\n\n');
+}
 export function processLine(input: string, environment: Environment = new GlobalEnvironment()): string | null {
   const line = input.trim();
   if (line === '') return '';
@@ -14,6 +24,14 @@ export function processLine(input: string, environment: Environment = new Global
   if (command.kind === 'term') {
     const core = elaborate(command.term, [], environment);
     return show(infer([], core));
+  }
+  if (command.kind === 'theorem') {
+    const proposition = elaborate(command.proposition, [], environment);
+    const proof = elaborate(command.proof, [], environment);
+    infer([], proposition);
+    check([], proof, proposition);
+    environment.define(command.name, proof);
+    return `theorem ${command.name}`;
   }
   const core = elaborate(command.term, [], environment);
   infer([], core);

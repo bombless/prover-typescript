@@ -227,3 +227,36 @@ git diff --check  -> success
 ```
 
 UI-3 is complete. Do not begin a later milestone automatically.
+
+## UI-4 — Natural Number Tutorial
+
+UI-4 adds a small Natural Numbers tutorial presentation layer with lesson/theorem selection, theorem reset, Kernel-backed completion, and next-theorem navigation. The UI continues to depend only on the browser-facing proof-engine views and result types.
+
+The capability audit was performed through the existing `RealProofEngine` path. The current engine can complete:
+
+```text
+0 = 0        -> rfl -> Kernel accepted
+n = n        -> intro; rfl -> Kernel accepted
+```
+
+The tutorial also exposes the planned addition content:
+
+```text
+n + 0 = n
+0 + n = n
+n + Succ m = Succ (n + m)
+```
+
+The capability audit found that `0 + n = n` is definitionally equal after `intro`, so UI-4 exposes that supported subtheorem through the real engine. The general `n + 0 = n` and `n + Succ m = Succ (n + m)` proofs remain unavailable with M17's current tactics. The Addition lesson therefore does not count as fully completed after proving only `0 + n = n`. UI-4 does not add unification, rewrite, induction, modify the Kernel, or fabricate completion.
+
+`completedTheorems` is derived only from a successful `ProofResult` whose `state.completed` is true. A successful result is produced only after `RealProofEngine` extracts the proof and the existing Kernel check succeeds.
+
+### Verification
+
+```text
+npm run build  -> success
+npm test       -> 160 tests / 160 passed / 0 failed
+npm run build:web -> success
+```
+
+UI-4 is complete for the audited capability scope. M19/M20/M21/M22 and UI-5/UI-6 are not started.

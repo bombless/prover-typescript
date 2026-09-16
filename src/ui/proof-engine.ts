@@ -3,7 +3,8 @@ import { parse } from "../parser/parser";
 import { proofState, type ProofState } from "../proof/state";
 import { tacticSession, TacticError, type TacticSession } from "../proof/tactic";
 import { show } from "../kernel/typecheck";
-import { type Term as CoreTerm } from "../syntax/ast";
+import { type Term as CoreTerm, Nat, Zero, variable, pi, eq } from "../syntax/ast";
+import { addTerm } from "../library/nat";
 
 export interface ContextEntryView { name: string; type: string; }
 export interface GoalView { id: string; target: string; context: ContextEntryView[]; }
@@ -62,6 +63,7 @@ interface RealTheorem { readonly name: string; readonly type: CoreTerm; }
 const REAL_THEOREMS: Record<string, RealTheorem> = {
   zero: { name: "zero", type: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Zero" }, right: { kind: "Zero" } } },
   identity: { name: "identity", type: { kind: "Pi", domain: { kind: "Nat" }, body: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 0, name: "n" }, right: { kind: "Var", index: 0, name: "n" } }, name: "n" } },
+  zero_plus_n: { name: "zero_plus_n", type: pi(Nat, eq(Nat, addTerm(Zero, variable(0, "n")), variable(0, "n")), "n") },
   assumption: { name: "assumption", type: { kind: "Pi", domain: { kind: "Nat" }, body: { kind: "Pi", domain: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 0, name: "n" }, right: { kind: "Var", index: 0, name: "n" } }, body: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 1, name: "n" }, right: { kind: "Var", index: 1, name: "n" } }, name: "h" }, name: "n" } },
   apply: { name: "apply", type: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Zero" }, right: { kind: "Zero" } } },
 };

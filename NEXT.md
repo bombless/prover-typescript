@@ -142,3 +142,78 @@ The UI remains an adapter over the existing Proof Engine; no ProofState, Tactic,
 ### Next stage
 
 The next stage is not started automatically. Re-check the workspace and choose the next explicitly authorized milestone before making further changes.
+
+## UI-4 — Natural Number Tutorial — complete for audited capability scope
+
+UI-4 adds the Natural Numbers lesson model and browser navigation:
+
+```text
+Natural Numbers
+  01 Zero
+  02 Equality
+  03 Addition
+  04 Addition: Successor
+```
+
+The lesson/theorem model is UI-facing presentation metadata. The UI resets to a fresh `RealProofEngine` session when a theorem is selected, and `Next theorem` also starts a fresh session.
+
+Capability audit results through the real path:
+
+```text
+0 = 0
+  rfl
+  ↓
+RealProofEngine
+  ↓
+TacticSession.proof()
+  ↓
+Kernel accepted
+
+n = n
+  intro; rfl
+  ↓
+RealProofEngine
+  ↓
+TacticSession.proof()
+  ↓
+Kernel accepted
+```
+
+The addition tutorial content is exposed with the audited partial capability:
+
+```text
+0 + n = n
+  intro; rfl
+  ↓
+Kernel accepted
+
+n + 0 = n
+  not currently completable by M17
+
+n + Succ m = Succ (n + m)
+  not currently completable by M17
+```
+
+The Addition lesson does not become a completed lesson item after only the supported `0 + n = n` subtheorem is proved. M17 still lacks the unification/rewrite/induction capabilities needed for the remaining general proofs.
+
+Completion state is driven only by a successful `ProofResult` with `state.completed === true`; the UI never sets completion directly. `MockProofEngine` remains intact for existing prototype/regression coverage and is not used to claim tutorial completion.
+
+### Verification
+
+```text
+npm run build     -> success
+npm test          -> 160 tests / 160 passed / 0 failed
+npm run build:web -> success
+git diff --check  -> success
+```
+
+### Explicitly not implemented
+
+```text
+M19 Unification
+M20 Implicit Arguments
+M21 Rewrite
+M22 Induction
+UI-5
+UI-6
+```

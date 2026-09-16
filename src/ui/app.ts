@@ -85,6 +85,7 @@ function render(): void {
     statusMessage = result.kind === "success" ? (result.message ?? "Proof state updated") : `Proof rejected: ${result.message}`;
     if (result.kind === "success") progress = recordProofResult(progress, exercise, result);
     render();
+     root.querySelector<HTMLInputElement>("#tactic-input")?.focus();
   };
   apply?.addEventListener("click", applyTactic);
   root.querySelectorAll<HTMLButtonElement>("[data-tactic]").forEach((button) => button.addEventListener("click", () => {

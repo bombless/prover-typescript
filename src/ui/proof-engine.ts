@@ -137,18 +137,12 @@ export function showDisplayTerm(term: CoreTerm): string {
 
 export function projectGoal(goal: import("../proof/state").Goal): DisplayProofState {
   const props = goal.context.map((entry) => ({ name: entry.name, type: showDisplayTerm(entry.type) }));
-  let target = whnf(goal.type);
 
-  // Keep the kernel state unchanged, but present intro-able binders as
-  // tutorial-friendly props. Thus `(n : Nat) → n + 0 = n` is displayed as
-  // `Props: n : Nat` and `Goal: n + 0 = n`, while `intro` remains the real
-  // operation that moves the binder into the proof context.
-  while (target.kind === "Pi") {
-    props.push({ name: target.name ?? `x${props.length + 1}`, type: showDisplayTerm(target.domain) });
-    target = whnf(target.body);
-  }
-
-  return { props, goal: formatDisplayTerm(target, props.map((entry) => entry.name).reverse()) };
+  // Keep the UI context faithful to the real proof context: a Pi binder is
+  // not a local assumption until `intro` actually moves it into the context.
+  // Therefore `(n : Nat) → n = n` initially stays in the Goal, and only after
+  // `intro` does `n : Nat` appear under Props / Context.
+  return { props, goal: formatDisplayTerm(whnf(goal.type), props.map((entry) => entry.name).reverse()) };
 }
 
 function canIntro(goal: import("../proof/state").Goal): boolean { return whnf(goal.type).kind === "Pi"; }

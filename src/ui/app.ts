@@ -33,11 +33,8 @@ function renderTactics(): string {
   const available = suggestions.filter((tactic) => tactic.id !== "exact" && tactic.id !== "apply");
   const otherIds = ["exact", "apply", "rewrite", "induction"];
   const other = otherIds.map((id) => TACTICS.find((tactic) => tactic.id === id)).filter((tactic): tactic is NonNullable<typeof tactic> => !!tactic);
-  const exercise = currentExercise();
-  const theoremSuggestion = exercise.theoremId === "add_succ"
-    ? `<div class="tactic-other"><div class="card-title">Suggested Theorem</div><button class="tactic-suggestion" type="button" data-tactic="exact add_succ" title="Use the existing Kernel-checked add_succ theorem."><code>exact add_succ</code><span>Use the existing add_succ theorem.</span></button></div>`
-    : "";
-  return `<aside class="tactic-panel" aria-label="Available tactics"><div class="card-title">Available Tactics</div><div class="tactic-suggestions">${available.length ? available.map((tactic) => `<button class="tactic-suggestion" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.syntax.trim()}</code><span>${tactic.description}</span></button>`).join("") : `<p class="muted">No automatic suggestions.</p>`}</div>${theoremSuggestion}<div class="tactic-other"><div class="card-title">Other Tactics</div>${other.map((tactic) => `<button class="tactic-other-item" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.label}</code></button>`).join("")}</div></aside>`;
+  const theoremItems = REAL_THEOREM_LIST.map((theorem) => `<button class="tactic-other-item theorem-item" type="button" data-theorem="${theorem.id}" title="Use theorem ${theorem.id}"><code>${theorem.label}</code><span>Use</span></button>`).join("");
+  return `<aside class="tactic-panel" aria-label="Proof tools"><div class="card-title">Available Tactics</div><div class="tactic-suggestions">${available.length ? available.map((tactic) => `<button class="tactic-suggestion" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.syntax.trim()}</code><span>${tactic.description}</span></button>`).join("") : `<p class="muted">No automatic suggestions.</p>`}</div><div class="tactic-other"><div class="card-title">Other Tactics</div>${other.map((tactic) => `<button class="tactic-other-item" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.label}</code></button>`).join("")}</div><div class="tactic-other theorem-panel"><div class="card-title">Theorems</div><div class="theorem-list">${theoremItems}</div></div></aside>`;
 }
 function selectExercise(exercise: Exercise): void {
   currentExerciseId = exercise.id;
@@ -98,6 +95,11 @@ function render(): void {
       if (input) input.value = syntax;
       applyTactic();
     }
+  }));
+  root.querySelectorAll<HTMLButtonElement>("[data-theorem]").forEach((button) => button.addEventListener("click", () => {
+    if (!input) return;
+    input.value = `exact ${button.dataset.theorem ?? ""}`;
+    input.focus();
   }));
   input?.addEventListener("keydown", (event) => { if (event.key === "Enter") applyTactic(); });
 }

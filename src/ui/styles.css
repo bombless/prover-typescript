@@ -120,6 +120,10 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .tactic-suggestion code { font-weight: 700; }
 .tactic-suggestion span { color: #778293; font-size: 12px; line-height: 1.35; }
 .tactic-other { margin-top: 22px; padding-top: 16px; border-top: 1px solid #e4e8ed; }
+.theorem-list { display: grid; gap: 6px; max-height: 320px; overflow-y: auto; }
+.theorem-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.theorem-item span { color: var(--muted); font-size: 0.78rem; }
+
 .tactic-other-item { display: block; width: 100%; padding: 7px 0; background: transparent; color: #667386; text-align: left; cursor: pointer; }
 .tactic-other-item:hover { color: #273449; }
 

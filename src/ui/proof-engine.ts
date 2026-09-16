@@ -278,12 +278,10 @@ export const MOCK_THEOREM_LIST = [
 ];
 export const MOCK_MULTI_GOAL_ID = "multi_goal";
 
-export const REAL_THEOREM_LIST = [
-  { id: "zero", label: "01  Zero" },
-  { id: "identity", label: "02  Identity" },
-  { id: "assumption", label: "03  Assumption" },
-  { id: "apply", label: "04  Apply" },
-];
+export const REAL_THEOREM_LIST = Object.values(REAL_THEOREMS).map((theorem, index) => ({
+  id: theorem.name,
+  label: `${String(index + 1).padStart(2, "0")}  ${theorem.name}`,
+}));
 
 
 

@@ -3,7 +3,7 @@ import { definitionalEqual, shift, whnf } from '../kernel/reduction';
 import { Term, app, lambda, refl, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
-import { UnificationError, UnificationTerm, substituteUnification, unify } from './unification';
+import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
 
 export class TacticError extends Error {
   constructor(message: string) { super(message); this.name = 'TacticError'; }
@@ -121,11 +121,11 @@ export class TacticSession {
     catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
 
     let metaContext = MetaContext.empty();
-    const argumentsForProof: Array<{ readonly type: Term; readonly meta: UnificationTerm }> = [];
+    const argumentsForProof: Array<{ readonly type: UnificationTerm; readonly meta: UnificationTerm; readonly implicit: boolean }> = [];
     while (currentType.kind === 'Pi') {
       const created = metaContext.create(hole.goal.context.length, currentType.domain);
       metaContext = created.context;
-      argumentsForProof.push({ type: currentType.domain, meta: created.term });
+      argumentsForProof.push({ type: currentType.domain, meta: created.term, implicit: currentType.implicit === true });
       currentType = whnf(substituteUnification(currentType.body, created.term) as Term);
     }
     if (argumentsForProof.length === 0) throw new TacticError(`apply expected a function, found ${show(currentType)}`);
@@ -142,8 +142,13 @@ export class TacticSession {
       const resolved = metaContext.resolve((argument.meta as { kind: 'meta'; id: number }).id);
       if (resolved.kind === 'term') {
         argumentNodes.push({ kind: 'term', term: resolved.term, depth: hole.depth });
+      } else if (argument.implicit) {
+        throw new TacticError(`Could not infer implicit argument ?m${resolved.id}`);
       } else {
-        const childGoal = goal(hole.goal.context, argument.type);
+        let childType: Term;
+        try { childType = toCoreTerm(argument.type, metaContext); }
+        catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+        const childGoal = goal(hole.goal.context, childType);
         const child = { id: childGoal.id!, goal: childGoal, depth: hole.depth };
         childHoles.push(child);
         argumentNodes.push({ kind: 'hole', id: child.id });

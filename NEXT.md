@@ -256,3 +256,69 @@ git diff --check   -> success
 ```
 
 M19 is complete. Stop here; do not begin M20 automatically.
+
+## M20 — Implicit Arguments — complete
+
+M20 adds bounded implicit-argument inference on top of the existing metavariable and unification infrastructure.
+
+Implemented path:
+
+```text
+apply theorem
+    ↓
+metavariables for Pi arguments
+    ↓
+implicit binders marked inference-only
+    ↓
+expected goal drives unification
+    ↓
+implicit assignments resolved
+    ↓
+unresolved explicit arguments remain as proof goals
+    ↓
+Core proof term
+    ↓
+Kernel acceptance
+```
+
+Implemented and tested:
+
+```text
+basic implicit inference
+expected-type-driven inference
+multiple implicit arguments
+explicit + implicit interaction
+implicit inference through application/unification
+failed implicit inference without guessing
+conflicting constraints
+scope safety via existing MetaContext/unification checks
+failed inference without state mutation
+Kernel-backed integration
+```
+
+The implementation reuses M18 `MetaContext` and M19 `unify`; no second inference or metavariable infrastructure was added. The Kernel was not modified and does not understand implicit-argument inference.
+
+Explicitly not implemented:
+
+```text
+rewrite
+induction
+simp
+ring
+automation
+typeclass inference
+general-purpose elaboration
+UI-5
+UI-6
+```
+
+### Verification
+
+```text
+npm run build      -> success
+npm test           -> 174 tests / 174 passed / 0 failed
+npm run build:web  -> success
+git diff --check   -> success
+```
+
+M20 is complete and committed independently. Stop here; do not begin M21 automatically.

@@ -299,3 +299,71 @@ git diff --check   -> success
 ```
 
 M19 is complete. Stop here; do not begin M20 automatically.
+
+## Milestone 20 — Implicit Arguments
+
+M20 is complete. The Proof Engine now provides bounded implicit-argument inference on top of the existing M18 metavariable and M19 unification infrastructure.
+
+The M20 path is:
+
+```text
+apply theorem
+    ↓
+create metavariables for Pi arguments
+    ↓
+mark implicit binders as inference-only
+    ↓
+unify theorem result with the current goal
+    ↓
+resolve implicit assignments
+    ↓
+create goals only for unresolved explicit arguments
+    ↓
+Core proof application
+    ↓
+TacticSession.proof()
+    ↓
+Kernel inference/check
+```
+
+Implemented and tested:
+
+```text
+single implicit argument inference
+expected-type-driven inference
+multiple implicit arguments
+explicit + implicit argument interaction
+implicit inference through application unification
+failed implicit inference without guessing
+conflicting constraints
+scope-safe metavariable assignments
+failed inference without session mutation
+Kernel-backed apply integration
+```
+
+Implicit binders are represented as a small optional marker on `Pi` terms and do not add implicit-argument semantics to the Kernel. `src/kernel/` was not modified; substitution, reduction, typing, and final proof validation continue to operate on ordinary Core terms. Unresolved implicit arguments are rejected clearly instead of becoming user-visible proof goals.
+
+M20 intentionally does not implement:
+
+```text
+rewrite
+induction
+simp
+ring
+automation
+typeclass inference
+general-purpose elaboration
+UI-5
+UI-6
+```
+
+### Verification
+
+```text
+npm run build      -> success
+npm test           -> 174 tests / 174 passed / 0 failed
+npm run build:web  -> success
+git diff --check   -> success
+```
+
+M20 is complete. Stop here; do not begin M21 automatically.

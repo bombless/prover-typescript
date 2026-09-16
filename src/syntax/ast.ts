@@ -1,7 +1,7 @@
 export type Term =
   | { readonly kind: 'Type' }
   | { readonly kind: 'Var'; readonly index: number; readonly name?: string }
-  | { readonly kind: 'Pi'; readonly domain: Term; readonly body: Term; readonly name?: string }
+  | { readonly kind: 'Pi'; readonly domain: Term; readonly body: Term; readonly name?: string; readonly implicit?: boolean }
   | { readonly kind: 'Lambda'; readonly domain: Term; readonly body: Term; readonly name?: string }
   | { readonly kind: 'App'; readonly fn: Term; readonly arg: Term }
   | { readonly kind: 'Nat' }
@@ -23,6 +23,10 @@ export function variable(index: number, name?: string): Term {
 
 export function pi(domain: Term, body: Term, name?: string): Term {
   return { kind: 'Pi', domain, body, name };
+}
+
+export function piImplicit(domain: Term, body: Term, name?: string): Term {
+  return { kind: 'Pi', domain, body, name, implicit: true };
 }
 
 export function lambda(domain: Term, body: Term, name?: string): Term {

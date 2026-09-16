@@ -53,3 +53,11 @@ test('failed unification leaves prior assignments stable', () => {
   assert.throws(() => unify(Zero, succ(Zero), assigned), UnificationError);
   assert.deepEqual(assigned.resolve(created.variable.id), coreTerm(Zero));
 });
+
+test('M20 conflicting implicit constraints reject without mutating prior assignments', () => {
+  const created = MetaContext.empty().create(0, Nat);
+  const first = unify(created.term, Nat, created.context);
+  assert.throws(() => unify(created.term, succ(Zero), first), UnificationError);
+  assert.deepEqual(first.resolve(created.variable.id), coreTerm(Nat));
+  assert.equal(created.context.assignments.size, 0);
+});

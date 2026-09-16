@@ -4,7 +4,7 @@ import { definitionalEqual } from '../src/kernel/reduction';
 import { infer } from '../src/kernel/typecheck';
 import { tacticSession } from '../src/proof/tactic';
 import { initialProofState } from '../src/proof/state';
-import { Nat, Type, app, eq, lambda, pi, variable } from '../src/syntax/ast';
+import { Nat, Type, app, eq, lambda, pi, piImplicit, variable } from '../src/syntax/ast';
 
 const idType = pi(Type, pi(variable(0), variable(1, 'A'), 'x'), 'A');
 
@@ -76,6 +76,56 @@ test('M19 apply uses unification to solve a dependent theorem argument', () => {
   const session = tacticSession(state).apply(variable(0, 'h'));
   assert.equal(session.state.goals.length, 0);
   assert.equal(session.proof().kind, 'App');
+});
+
+test('M20 apply infers a single implicit type argument from the goal', () => {
+  const identityType = piImplicit(Type, pi(variable(0, 'A'), variable(1, 'A'), 'x'), 'A');
+  const state = { goals: [{ context: [{ name: 'id', type: identityType }, { name: 'n', type: Nat }], type: Nat }] };
+  const session = tacticSession(state).apply(variable(1, 'id'));
+  assert.equal(session.state.goals.length, 1);
+  assert.deepEqual(session.state.goals[0].type, Nat);
+  const proof = session.exact(variable(0, 'n')).proof();
+  assert.equal(proof.kind, 'App');
+  assert.ok(definitionalEqual(infer(state.goals[0].context.map((entry) => entry.type), proof), Nat));
+});
+
+test('M20 infers an implicit argument through application unification', () => {
+  const predicate = pi(Type, Type, 'P');
+  const theoremType = piImplicit(Type, app(variable(1, 'P'), variable(0, 'A')), 'A');
+  const goalType = app(variable(1, 'P'), Nat);
+  const state = { goals: [{ context: [{ name: 'P', type: predicate }, { name: 'h', type: theoremType }], type: goalType }] };
+  const session = tacticSession(state).apply(variable(0, 'h'));
+  assert.equal(session.state.goals.length, 0);
+  assert.equal(session.proof().kind, 'App');
+});
+
+test('M20 supports multiple implicit arguments', () => {
+  const theoremType = piImplicit(Type,
+    piImplicit(Type,
+      eq(Type, variable(1, 'A'), variable(0, 'B')), 'B'), 'A');
+  const goalType = eq(Type, Nat, Nat);
+  const state = { goals: [{ context: [{ name: 'h', type: theoremType }], type: goalType }] };
+  const session = tacticSession(state).apply(variable(0, 'h'));
+  assert.equal(session.state.goals.length, 0);
+  assert.equal(session.proof().kind, 'App');
+});
+
+test('M20 explicit and implicit arguments do not get mixed', () => {
+  const theoremType = piImplicit(Type, pi(Nat, variable(1, 'A'), 'x'), 'A');
+  const state = { goals: [{ context: [{ name: 'h', type: theoremType }, { name: 'x', type: Nat }], type: Nat }] };
+  const session = tacticSession(state).apply(variable(1, 'h'));
+  assert.equal(session.state.goals.length, 1);
+  assert.deepEqual(session.state.goals[0].type, Nat);
+  assert.equal(session.exact(variable(0, 'x')).proof().kind, 'App');
+});
+
+test('M20 failed implicit inference is explicit and leaves the session unchanged', () => {
+  const theoremType = piImplicit(Type, pi(Type, Type, 'value'), 'A');
+  const state = { goals: [{ context: [{ name: 'h', type: theoremType }], type: Type }] };
+  const session = tacticSession(state);
+  const before = session.state;
+  assert.throws(() => session.apply(variable(0, 'h')), /Could not infer implicit argument/);
+  assert.equal(session.state, before);
 });
 
 test('failed tactics leave the original session unchanged', () => {

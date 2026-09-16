@@ -108,6 +108,21 @@ test("display projection renders Chapter 2 n + 0 as props plus goal", () => {
     goal: "n + 0 = n",
   });
 });
+
+test("display projection renders the induction hypothesis using surface notation", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("add_zero");
+  assert.equal(engine.runTactic("intro").kind, "success");
+  assert.equal(engine.runTactic("induction n").kind, "success");
+  assert.equal(engine.runTactic("rfl").kind, "success");
+  assert.deepEqual(engine.displayProofState(), {
+    props: [
+      { name: "n", type: "Nat" },
+      { name: "IH", type: "n + 0 = n" },
+    ],
+    goal: "Succ n + 0 = Succ n",
+  });
+});
 test("real engine supports intro followed by rfl", () => {
   const engine = new RealProofEngine();
   engine.loadTheorem("identity");

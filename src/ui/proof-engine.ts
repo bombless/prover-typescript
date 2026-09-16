@@ -92,6 +92,15 @@ function cloneView(state: ProofStateView): ProofStateView {
   return { theoremName: state.theoremName, completed: state.completed, goals: state.goals.map((goal) => ({ id: goal.id, target: goal.target, context: goal.context.map((entry) => ({ ...entry })) })) };
 }
 
+function isAddRecursor(term: Extract<CoreTerm, { kind: "NatRec" }>): boolean {
+  if (term.motive.kind !== "Lambda" || !definitionalEqual(term.motive.domain, Nat)) return false;
+  if (!definitionalEqual(term.motive.body, Nat)) return false;
+  if (term.succCase.kind !== "Lambda" || !definitionalEqual(term.succCase.domain, Nat)) return false;
+  if (term.succCase.body.kind !== "Lambda" || !definitionalEqual(term.succCase.body.domain, Nat)) return false;
+  const succBody = term.succCase.body.body;
+  return succBody.kind === "Succ" && succBody.value.kind === "Var" && succBody.value.index === 0;
+}
+
 function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): string {
   switch (term.kind) {
     case "Type": return "Type";
@@ -111,6 +120,12 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
         return `${formatDisplayTerm(term.fn.arg, boundNames)} + ${formatDisplayTerm(term.arg, boundNames)}`;
       }
       return `(${formatDisplayTerm(term.fn, boundNames)} ${formatDisplayTerm(term.arg, boundNames)})`;
+    }
+    case "NatRec": {
+      if (isAddRecursor(term)) {
+        return `${formatDisplayTerm(term.scrutinee, boundNames)} + ${formatDisplayTerm(term.zeroCase, boundNames)}`;
+      }
+      return show(term);
     }
     default: return show(term);
   }

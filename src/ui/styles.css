@@ -84,6 +84,8 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .tactic-card { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
 .tactic-card .card-title { grid-column: 1 / -1; }
 .tactic-input { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #cfd6df; border-radius: 7px; outline: none; }
+.tactic-input[aria-invalid="true"] { border-color: #c44; }
+.tactic-feedback { grid-column: 1 / -1; margin-top: -4px; color: #b42318; font-size: 14px; }
 .tactic-input:focus { border-color: #8e9aab; box-shadow: 0 0 0 3px rgba(110, 124, 145, .12); }
 .apply-button { align-self: stretch; padding: 0 18px; border-radius: 7px; background: #273449; color: #fff; font-weight: 650; }
 .apply-button:disabled { opacity: .45; }

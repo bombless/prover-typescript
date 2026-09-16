@@ -387,3 +387,38 @@ npm run git checks -> success
 ```
 
 M21 is complete at the Proof Engine/test level and must be independently verified, documented, committed, then stopped. Do not begin M22 automatically.
+
+
+## M22 — Natural Number Induction — complete
+
+M22 adds bounded natural-number induction in the Proof Engine using the existing Core `NatRec` constructor. Induction creates two real ProofState goals:
+
+```text
+base
+  ⊢ P 0
+
+successor
+  n : Nat
+  IH : P n
+  ⊢ P (Succ n)
+```
+
+The `base` / `successor` labels remain Proof Engine case metadata. The successor proof is compiled with the two binders required by Core `NatRec`, so the induction hypothesis is a real lambda-bound Core term. Completed induction proofs are extracted through `TacticSession.proof()` and checked by the unchanged Kernel.
+
+The first implementation is intentionally bounded to the newest local `Nat` binder. This supports the ordinary `intro; induction n` shape without adding dependent-local-context generalization. Existing M18 metavariables and M19/M20 unification/implicit inference are reused by the rest of the tactic engine; M22 adds no induction-specific metavariable infrastructure. M21 rewrite is reusable in successor cases.
+
+Verified coverage includes real two-goal construction, case metadata, induction hypotheses, focused-goal solving, Kernel-backed `NatRec` extraction, `n + 0 = n` through `intro; induction n; ... rewrite ...`, rejection of non-`Nat` and missing variables, and rollback on invalid targets.
+
+M22 does not implement general induction automation, simplification, ring normalization, proof search, rewrite search, typeclass inference, general-purpose elaboration, UI-5, or UI-6.
+
+### Verification
+
+```text
+npm run build -> success
+npm test -> 183 tests / 183 passed / 0 failed
+npm run build:web -> success
+git diff --check -> success
+git diff -- src/kernel/ -> empty
+```
+
+M22 is complete. The next milestone must begin with a fresh Capability Audit.

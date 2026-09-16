@@ -1,6 +1,6 @@
 import { check, infer, show } from '../kernel/typecheck';
-import { definitionalEqual, shift, whnf } from '../kernel/reduction';
-import { Term, app, eqRec, lambda, refl, variable } from '../syntax/ast';
+import { definitionalEqual, normalize, shift, whnf } from '../kernel/reduction';
+import { Term, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
 import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
@@ -14,7 +14,8 @@ type ProofNode =
   | { readonly kind: 'term'; readonly term: Term; readonly depth: number }
   | { readonly kind: 'lambda'; readonly domain: Term; readonly name?: string; readonly body: ProofNode }
   | { readonly kind: 'app'; readonly fn: ProofNode; readonly arg: ProofNode }
-  | { readonly kind: 'eqRec'; readonly motive: Term; readonly left: Term; readonly right: Term; readonly equality: Term; readonly reflCase: ProofNode };
+  | { readonly kind: 'eqRec'; readonly motive: Term; readonly left: Term; readonly right: Term; readonly equality: Term; readonly reflCase: ProofNode }
+  | { readonly kind: 'natRec'; readonly motive: Term; readonly scrutinee: Term; readonly zeroCase: ProofNode; readonly succCase: ProofNode };
 
 interface Hole { readonly id: GoalId; readonly goal: Goal; readonly depth: number; }
 
@@ -79,7 +80,8 @@ function replaceNode(root: ProofNode, id: GoalId, replacement: ProofNode): Proof
   if (root.kind === 'term') return root;
   if (root.kind === 'lambda') return { ...root, body: replaceNode(root.body, id, replacement) };
   if (root.kind === 'app') return { kind: 'app', fn: replaceNode(root.fn, id, replacement), arg: replaceNode(root.arg, id, replacement) };
-  return { ...root, reflCase: replaceNode(root.reflCase, id, replacement) };
+  if (root.kind === 'eqRec') return { ...root, reflCase: replaceNode(root.reflCase, id, replacement) };
+  return { ...root, zeroCase: replaceNode(root.zeroCase, id, replacement), succCase: replaceNode(root.succCase, id, replacement) };
 }
 
 function compile(root: ProofNode, depth = 0): Term {
@@ -89,6 +91,29 @@ function compile(root: ProofNode, depth = 0): Term {
     case 'lambda': return lambda(root.domain, compile(root.body, depth + 1), root.name);
     case 'app': return app(compile(root.fn, depth), compile(root.arg, depth));
     case 'eqRec': return eqRec(root.motive, compile(root.reflCase, depth), root.left, root.right, root.equality);
+    case 'natRec': {
+      const successorCase = lambda(
+        Nat,
+        lambda(app(shift(root.motive, 1), variable(0, 'n')), compile(root.succCase, depth + 2), 'IH'),
+        'n',
+      );
+      return natRec(root.motive, compile(root.zeroCase, depth), successorCase, root.scrutinee);
+    }
+  }
+}
+
+function abstractInductionVariable(term: Term, targetIndex: number, depth = 0): Term {
+  switch (term.kind) {
+    case 'Var': return term.index === targetIndex + depth ? variable(depth, term.name) : term;
+    case 'Type': case 'Nat': case 'Zero': return term;
+    case 'Pi': return { ...term, domain: abstractInductionVariable(term.domain, targetIndex, depth), body: abstractInductionVariable(term.body, targetIndex, depth + 1) };
+    case 'Lambda': return { ...term, domain: abstractInductionVariable(term.domain, targetIndex, depth), body: abstractInductionVariable(term.body, targetIndex, depth + 1) };
+    case 'App': return app(abstractInductionVariable(term.fn, targetIndex, depth), abstractInductionVariable(term.arg, targetIndex, depth));
+    case 'Succ': return succ(abstractInductionVariable(term.value, targetIndex, depth));
+    case 'NatRec': return natRec(abstractInductionVariable(term.motive, targetIndex, depth), abstractInductionVariable(term.zeroCase, targetIndex, depth), abstractInductionVariable(term.succCase, targetIndex, depth + 2), abstractInductionVariable(term.scrutinee, targetIndex, depth));
+    case 'Eq': return { ...term, type: abstractInductionVariable(term.type, targetIndex, depth), left: abstractInductionVariable(term.left, targetIndex, depth), right: abstractInductionVariable(term.right, targetIndex, depth) };
+    case 'Refl': return { ...term, type: abstractInductionVariable(term.type, targetIndex, depth), value: abstractInductionVariable(term.value, targetIndex, depth) };
+    case 'EqRec': return { ...term, motive: abstractInductionVariable(term.motive, targetIndex, depth), reflCase: abstractInductionVariable(term.reflCase, targetIndex, depth), left: abstractInductionVariable(term.left, targetIndex, depth), right: abstractInductionVariable(term.right, targetIndex, depth), equality: abstractInductionVariable(term.equality, targetIndex, depth) };
   }
 }
 
@@ -186,6 +211,52 @@ export class TacticSession {
       reflCase: { kind: 'hole', id: child.id },
     });
     return this.withReplacement(hole.id, [child], root);
+  }
+
+  induction(name: string): TacticSession {
+    const hole = this.firstHole();
+    const variableName = name.trim();
+    if (!variableName) throw new TacticError('induction expects a variable name');
+
+    // M22 intentionally bounds induction to the newest local binder. This
+    // avoids dependent-local-context generalization while supporting the
+    // ordinary `intro; induction n` proof shape.
+    const index = hole.goal.context.length - 1;
+    const entry = hole.goal.context[index];
+    if (!entry || entry.name !== variableName) {
+      throw new TacticError(`induction variable not found in the current context: ${variableName}`);
+    }
+    if (!definitionalEqual(entry.type, Nat)) {
+      throw new TacticError(`induction requires a Nat variable, found ${show(entry.type)}`);
+    }
+
+    // Validate the current target before allocating any goals. No session
+    // state is changed if construction is rejected.
+    try { infer(contextTypes(hole.goal.context), hole.goal.type); }
+    catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+
+    const motive = lambda(Nat, abstractInductionVariable(hole.goal.type, index), variableName);
+    const baseType = normalize(app(motive, Zero));
+    const successorTarget = normalize(app(motive, succ(variable(1, variableName))));
+    const baseContext = hole.goal.context.slice(0, -1);
+    const baseGoal = goal(baseContext, baseType, 'base');
+    const inductionHypothesis = normalize(app(motive, variable(0, variableName)));
+    const successorContext: Context = [
+      ...baseContext,
+      { name: variableName, type: Nat },
+      { name: 'IH', type: inductionHypothesis },
+    ];
+    const successorGoal = goal(successorContext, successorTarget, 'successor');
+    const baseHole: Hole = { id: baseGoal.id!, goal: baseGoal, depth: hole.depth };
+    const successorHole: Hole = { id: successorGoal.id!, goal: successorGoal, depth: hole.depth + 2 };
+    const root = replaceNode(this.root, hole.id, {
+      kind: 'natRec',
+      motive,
+      scrutinee: variable(index, variableName),
+      zeroCase: { kind: 'hole', id: baseHole.id },
+      succCase: { kind: 'hole', id: successorHole.id },
+    });
+    return this.withReplacement(hole.id, [baseHole, successorHole], root);
   }
 
   assumption(): TacticSession {

@@ -208,3 +208,22 @@ npm test          -> 146 tests / 146 passed / 0 failed
 ```
 
 UI-2 is complete. Stop here; do not begin UI-3 automatically.
+
+## UI-3 — Real Proof Engine Adapter
+
+UI-3 connects the browser UI to the existing Proof Engine through a `RealProofEngine` adapter. The UI can now load real theorem states, run the existing bounded tactics (`intro`, `exact`, `rfl`, `assumption`, and `apply`), render the resulting proof state, report tactic failures, and display Kernel-accepted completion.
+
+The browser-facing state remains deliberately narrow: `ProofStateView` exposes theorem names, goal IDs, rendered targets, and rendered local context only. Proof Engine internals, Core terms, metavariable assignments, and tactic session state stay behind the adapter.
+
+Completed proofs are extracted through the existing `TacticSession.proof()` boundary, which rechecks the resulting Core term with the Kernel. The Kernel itself remains unchanged and continues to be the final trusted boundary.
+
+### Verification
+
+```text
+npm test          -> 152 tests / 152 passed / 0 failed
+npm run build     -> success
+npm run build:web -> success
+git diff --check  -> success
+```
+
+UI-3 is complete. Do not begin a later milestone automatically.

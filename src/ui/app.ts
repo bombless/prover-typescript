@@ -1,13 +1,13 @@
 import "./styles.css";
-import { MOCK_THEOREM_LIST, MockProofEngine, type ProofStateView } from "./proof-engine";
+import { REAL_THEOREM_LIST, RealProofEngine, type ProofStateView } from "./proof-engine";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("UI root element #app was not found");
 const root = app;
 
-const engine = new MockProofEngine();
-let state: ProofStateView = engine.loadTheorem("n_plus_zero");
-let statusMessage = "Prototype / Mock Mode";
+const engine = new RealProofEngine();
+let state: ProofStateView = engine.loadTheorem("zero");
+let statusMessage = "Real Proof Engine";
 let statusKind: "neutral" | "success" | "error" = "neutral";
 
 function renderContext(context: ProofStateView["goals"][number]["context"]): string {
@@ -17,7 +17,7 @@ function renderContext(context: ProofStateView["goals"][number]["context"]): str
 }
 
 function renderGoals(): string {
-  if (state.completed) return `<div class="completed-state"><strong>✓ Mock proof completed</strong><span>Prototype result — not checked by the Kernel.</span></div>`;
+  if (state.completed) return `<div class="completed-state"><strong>✓ Proof accepted</strong><span>Accepted by the real Kernel.</span></div>`;
   return state.goals.map((goal, index) => `
     <article class="goal-item ${index === 0 ? "focused" : ""}">
       <div class="goal-heading"><span>Goal ${index + 1}</span>${index === 0 ? "<span>focused</span>" : ""}</div>
@@ -36,9 +36,9 @@ function render(): void {
       </header>
       <main class="workspace">
         <aside class="sidebar" aria-label="Lesson and theorem navigator">
-          <div class="section-label">Lessons</div>
-          <h2>Natural Numbers</h2>
-          <nav>${MOCK_THEOREM_LIST.map((theorem) => `
+          <div class="section-label">Theorems</div>
+          <h2>Real Engine</h2>
+          <nav>${REAL_THEOREM_LIST.map((theorem) => `
             <button class="theorem-item ${state.theoremName === theorem.id ? "active" : ""}" data-theorem="${theorem.id}" type="button">
               <span class="status">${state.theoremName === theorem.id ? "→" : theorem.label.slice(0, 2)}</span><span>${theorem.label.slice(4)}</span>
             </button>`).join("")}</nav>
@@ -46,7 +46,7 @@ function render(): void {
         <section class="proof-panel">
           <div class="theorem-header">
             <div><div class="section-label">Theorem</div><h1>${state.theoremName}</h1></div>
-            <span class="mode-badge">Prototype / Mock Mode</span>
+            <span class="mode-badge">Real Proof Engine</span>
           </div>
           <section class="card goal-card"><div class="card-title">Goal</div><div class="goal-expression">${state.goals[0]?.target ?? "No goals"}</div></section>
           <section class="card"><div class="card-title">Context</div>${renderContext(state.goals[0]?.context ?? [])}</section>
@@ -60,14 +60,14 @@ function render(): void {
             <div><div class="card-title">Proof State</div><div class="state-message ${statusKind}">${statusMessage}</div></div>
             <span class="goal-count">${state.goals.length} ${state.goals.length === 1 ? "goal" : "goals"}</span>
           </section>
-          <section class="goals-list" aria-label="Mock proof goals">${renderGoals()}</section>
+          <section class="goals-list" aria-label="Proof goals">${renderGoals()}</section>
         </section>
       </main>
     </div>`;
 
   root.querySelectorAll<HTMLButtonElement>("[data-theorem]").forEach((button) => button.addEventListener("click", () => {
-    state = engine.loadTheorem(button.dataset.theorem ?? "n_plus_zero");
-    statusMessage = "Prototype / Mock Mode";
+    state = engine.loadTheorem(button.dataset.theorem ?? "zero");
+    statusMessage = "Real Proof Engine";
     statusKind = "neutral";
     render();
   }));
@@ -79,7 +79,7 @@ function render(): void {
     const result = engine.runTactic(input.value);
     state = result.state;
     statusKind = result.kind;
-    statusMessage = result.kind === "success" ? (result.message ?? "Mock proof state updated") : `✗ Tactic failed — ${result.message}`;
+    statusMessage = result.kind === "success" ? (result.message ?? "Proof state updated") : `✗ Proof rejected — ${result.message}`;
     render();
   };
   apply?.addEventListener("click", applyTactic);
@@ -87,5 +87,3 @@ function render(): void {
 }
 
 render();
-
-

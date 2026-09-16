@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MockProofEngine } from "../src/ui/proof-engine";
+import { MockProofEngine, RealProofEngine, type ProofEngine } from "../src/ui/proof-engine";
 
 test("UI proof view loads an initial theorem without exposing engine internals", () => {
   const engine = new MockProofEngine();
@@ -60,4 +60,62 @@ test("returned proof states are detached from engine state", () => {
   const state = engine.loadTheorem("zero");
   state.goals[0].target = "mutated";
   assert.equal(engine.runTactic("rfl").kind, "success");
+});
+
+test("real engine accepts a proof through the kernel", () => {
+  const engine: ProofEngine = new RealProofEngine();
+  engine.loadTheorem("zero");
+  const result = engine.runTactic("rfl");
+  assert.equal(result.kind, "success");
+  assert.equal(result.message, "Proof accepted");
+  assert.equal(result.state.completed, true);
+});
+
+test("real engine rejects an invalid tactic and preserves the proof state", () => {
+  const engine = new RealProofEngine();
+  const before = engine.loadTheorem("zero");
+  const result = engine.runTactic("exact Nat");
+  assert.equal(result.kind, "error");
+  assert.match(result.message, /Type mismatch|Found: Type/);
+  assert.deepEqual(result.state, before);
+});
+
+test("real engine supports intro followed by rfl", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("identity");
+  const intro = engine.runTactic("intro");
+  assert.equal(intro.kind, "success");
+  assert.equal(intro.state.goals[0].context[0].name, "n");
+  const result = engine.runTactic("rfl");
+  assert.equal(result.kind, "success");
+  assert.equal(result.message, "Proof accepted");
+});
+
+test("real engine supports assumption", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("assumption");
+  assert.equal(engine.runTactic("intro").kind, "success");
+  assert.equal(engine.runTactic("intro").kind, "success");
+  const result = engine.runTactic("assumption");
+  assert.equal(result.kind, "success");
+  assert.equal(result.message, "Proof accepted");
+});
+
+test("real engine supports apply followed by exact", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("apply");
+  const applied = engine.runTactic("apply (x : Nat) => Refl Nat 0");
+  assert.equal(applied.kind, "success");
+  assert.equal(applied.state.goals.length, 1);
+  assert.equal(applied.state.goals[0].target, "Nat");
+  const result = engine.runTactic("exact 0");
+  assert.equal(result.kind, "success");
+  assert.equal(result.message, "Proof accepted");
+});
+
+test("real engine does not expose proof internals through its UI state", () => {
+  const engine = new RealProofEngine();
+  const state = engine.loadTheorem("identity");
+  assert.deepEqual(Object.keys(state.goals[0]), ["id", "target", "context"]);
+  assert.equal("type" in state.goals[0], false);
 });

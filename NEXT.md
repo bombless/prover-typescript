@@ -109,3 +109,36 @@ UI-3 — Real Proof Engine Adapter
 ```
 
 Do not begin UI-3 automatically.
+
+## UI-3 — Real Proof Engine Adapter — complete
+
+UI-3 connects the browser UI to the existing Proof Engine through `RealProofEngine`.
+
+The adapter reuses `ProofState`, `TacticSession`, the existing parser/elaborator path for tactic arguments, and the existing Kernel validation performed by proof extraction. The browser-facing `ProofStateView` remains presentation-only and does not expose Core terms, metavariable assignments, or internal tactic state.
+
+Supported browser tactics are the existing bounded proof-engine operations:
+
+```text
+intro
+exact <term>
+rfl
+assumption
+apply <term>
+```
+
+Successful completion calls proof extraction, which performs the existing Kernel inference check. Tactic failures return a user-facing error while preserving the previous session state.
+
+### Verification
+
+```text
+npm test          -> 152 tests / 152 passed / 0 failed
+npm run build     -> success
+npm run build:web -> success
+git diff --check  -> success
+```
+
+The UI remains an adapter over the existing Proof Engine; no ProofState, Tactic, or UI metadata was moved into `src/kernel/`.
+
+### Next stage
+
+The next stage is not started automatically. Re-check the workspace and choose the next explicitly authorized milestone before making further changes.

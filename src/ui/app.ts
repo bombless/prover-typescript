@@ -121,6 +121,30 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+document.addEventListener("keydown", (event) => {
+  const target = event.target as HTMLElement | null;
+  const tagName = target?.tagName.toLowerCase();
+  const isEditable = tagName === "input" || tagName === "textarea" || target?.isContentEditable;
+
+  if (event.key === "Enter" && !isEditable) {
+    const tacticInput = document.querySelector<HTMLInputElement>("#tactic-input");
+    if (tacticInput) {
+      event.preventDefault();
+      tacticInput.focus();
+      tacticInput.select();
+    }
+    return;
+  }
+
+  if (event.key === "ArrowRight" && !isEditable) {
+    const nextButton = document.querySelector<HTMLButtonElement>("#next-button");
+    if (nextButton && !nextButton.disabled) {
+      event.preventDefault();
+      nextButton.click();
+    }
+  }
+});
+
 render();
 
 

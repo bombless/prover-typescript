@@ -62,7 +62,7 @@ button { border: 0; }
 .status { color: #8792a2; font-variant-numeric: tabular-nums; }
 .completed .status { color: #4f7d61; }
 
-.proof-panel { width: min(900px, 100%); padding: 42px 48px 64px; }
+.proof-panel { width: 100%; padding: 42px 48px 64px; }
 .theorem-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 26px; }
 h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .mode-badge { padding: 6px 9px; border: 1px solid #d8dee6; border-radius: 999px; color: #697386; background: #fff; font-size: 12px; }
@@ -90,6 +90,8 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
   .sidebar nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .proof-panel { padding: 30px 18px 48px; }
   .theorem-header { gap: 16px; }
+  .proof-layout { grid-template-columns: 1fr; }
+  .tactic-panel { position: static; }
 }
 
 .state-message { margin-top: 8px; font-size: 14px; }
@@ -107,3 +109,18 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .unavailable-state strong { color: #5d3f3f; }
 .unavailable-state span { color: #7a6868; font-size: 13px; line-height: 1.5; }
 .next-button { margin-top: 18px; padding: 11px 16px; border-radius: 7px; background: #273449; color: #fff; font-weight: 650; cursor: pointer; }
+.proof-layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 18px; align-items: start; }
+.proof-main { min-width: 0; }
+.proof-state-card { margin-bottom: 14px; }
+.context-list { margin-top: 10px; }
+.tactic-panel { position: sticky; top: 18px; padding: 18px; border: 1px solid #dfe4ea; border-radius: 10px; background: #fff; }
+.tactic-suggestions { display: grid; gap: 9px; margin-top: 12px; }
+.tactic-suggestion { display: grid; gap: 4px; width: 100%; padding: 11px 12px; border: 1px solid #d9dfe6; border-radius: 8px; background: #fff; color: #273449; text-align: left; cursor: pointer; }
+.tactic-suggestion:hover { background: #f7f9fb; border-color: #aeb8c5; }
+.tactic-suggestion code { font-weight: 700; }
+.tactic-suggestion span { color: #778293; font-size: 12px; line-height: 1.35; }
+.tactic-other { margin-top: 22px; padding-top: 16px; border-top: 1px solid #e4e8ed; }
+.tactic-other-item { display: block; width: 100%; padding: 7px 0; background: transparent; color: #667386; text-align: left; cursor: pointer; }
+.tactic-other-item:hover { color: #273449; }
+
+

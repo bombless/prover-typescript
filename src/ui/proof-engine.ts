@@ -9,12 +9,21 @@ import { addZeroType } from "../library/add-zero";
 import { zeroAddType } from "../library/zero-add";
 import { succAddType } from "../library/succ-add";
 import { addSuccProof, addSuccType } from "../library/add-succ";
+import { definitionalEqual, shift, whnf } from "../kernel/reduction";
 
 export interface ContextEntryView { name: string; type: string; }
 export interface GoalView { id: string; target: string; context: ContextEntryView[]; }
 export interface ProofStateView { theoremName: string; goals: GoalView[]; completed: boolean; }
+export interface DisplayProofState { props: ContextEntryView[]; goal: string; }
+export interface TacticDescriptor {
+  id: string;
+  label: string;
+  syntax: string;
+  description: string;
+  canApply: (goal: import("../proof/state").Goal) => boolean;
+}
 export type ProofResult = { kind: "success"; state: ProofStateView; message?: string } | { kind: "error"; message: string; state: ProofStateView };
-export interface ProofEngine { loadTheorem(id: string): ProofStateView; runTactic(tactic: string): ProofResult; }
+export interface ProofEngine { loadTheorem(id: string): ProofStateView; runTactic(tactic: string): ProofResult; tacticSuggestions(): TacticDescriptor[]; }
 
 interface MockTheorem { name: string; goals: GoalView[]; }
 const MOCK_THEOREMS: Record<string, MockTheorem> = {
@@ -36,6 +45,7 @@ function initialState(theorem: MockTheorem): ProofStateView { return cloneMockSt
 export class MockProofEngine implements ProofEngine {
   private state = initialState(MOCK_THEOREMS.n_plus_zero);
   loadTheorem(id: string): ProofStateView { const theorem = MOCK_THEOREMS[id] ?? MOCK_THEOREMS.n_plus_zero; this.state = initialState(theorem); return cloneMockState(this.state); }
+  tacticSuggestions(): TacticDescriptor[] { return []; }
   runTactic(tactic: string): ProofResult {
     const normalized = tactic.trim().toLowerCase();
     if (!normalized) return { kind: "error", message: "Enter a tactic before applying it.", state: cloneMockState(this.state) };
@@ -82,6 +92,47 @@ function cloneView(state: ProofStateView): ProofStateView {
   return { theoremName: state.theoremName, completed: state.completed, goals: state.goals.map((goal) => ({ id: goal.id, target: goal.target, context: goal.context.map((entry) => ({ ...entry })) })) };
 }
 
+export function showDisplayTerm(term: CoreTerm): string {
+  switch (term.kind) {
+    case "Pi": return `(${term.name ?? "x"} : ${showDisplayTerm(term.domain)}) → ${showDisplayTerm(term.body)}`;
+    case "Eq": return `${showDisplayTerm(term.left)} = ${showDisplayTerm(term.right)}`;
+    default: return show(term);
+  }
+}
+
+export function projectGoal(goal: import("../proof/state").Goal): DisplayProofState {
+  return { props: goal.context.map((entry) => ({ name: entry.name, type: showDisplayTerm(entry.type) })), goal: showDisplayTerm(goal.type) };
+}
+
+function canIntro(goal: import("../proof/state").Goal): boolean { return whnf(goal.type).kind === "Pi"; }
+function canRfl(goal: import("../proof/state").Goal): boolean {
+  const type = whnf(goal.type);
+  return type.kind === "Eq" && definitionalEqual(type.left, type.right);
+}
+function canAssumption(goal: import("../proof/state").Goal): boolean {
+  return goal.context.some((entry, index) => definitionalEqual(shift(entry.type, goal.context.length - index), goal.type));
+}
+function canInduction(goal: import("../proof/state").Goal): boolean {
+  const entry = goal.context[goal.context.length - 1];
+  return !!entry && definitionalEqual(entry.type, { kind: "Nat" });
+}
+function canRewrite(goal: import("../proof/state").Goal): boolean {
+  return goal.context.some((entry) => whnf(entry.type).kind === "Eq");
+}
+
+export const TACTICS: TacticDescriptor[] = [
+  { id: "intro", label: "intro", syntax: "intro", description: "Introduce a proposition into the local context.", canApply: canIntro },
+  { id: "rfl", label: "rfl", syntax: "rfl", description: "Close a definitionally equal equality.", canApply: canRfl },
+  { id: "assumption", label: "assumption", syntax: "assumption", description: "Use a matching local hypothesis.", canApply: canAssumption },
+  { id: "induction", label: "induction", syntax: "induction ", description: "Perform induction on the newest Nat variable.", canApply: canInduction },
+  { id: "rewrite", label: "rewrite", syntax: "rewrite ", description: "Rewrite the goal using an equality hypothesis.", canApply: canRewrite },
+  { id: "exact", label: "exact", syntax: "exact ", description: "Provide an exact proof term.", canApply: () => true },
+  { id: "apply", label: "apply", syntax: "apply ", description: "Apply a theorem or function to the current goal.", canApply: () => true },
+];
+
+export function tacticSuggestionsForGoal(goal: import("../proof/state").Goal): TacticDescriptor[] {
+  return TACTICS.filter((tactic) => tactic.canApply(goal));
+}
 function toView(theoremName: string, state: ProofState): ProofStateView {
   return {
     theoremName,
@@ -105,6 +156,15 @@ export class RealProofEngine implements ProofEngine {
     return cloneView(toView(this.theoremName, this.session.state));
   }
 
+  tacticSuggestions(): TacticDescriptor[] {
+    const goal = this.session.currentGoal();
+    return goal ? tacticSuggestionsForGoal(goal) : [];
+  }
+
+  displayProofState(): DisplayProofState | null {
+    const goal = this.session.currentGoal();
+    return goal ? projectGoal(goal) : null;
+  }
   runTactic(tactic: string): ProofResult {
     const source = tactic.trim();
     const currentView = () => cloneView(toView(this.theoremName, this.session.state));
@@ -183,3 +243,8 @@ export const REAL_THEOREM_LIST = [
   { id: "assumption", label: "03  Assumption" },
   { id: "apply", label: "04  Apply" },
 ];
+
+
+
+
+

@@ -1,5 +1,5 @@
 import "./styles.css";
-import { RealProofEngine, type ProofStateView } from "./proof-engine";
+import { RealProofEngine, TACTICS, type DisplayProofState, type ProofStateView } from "./proof-engine";
 import { NATURAL_NUMBERS_LESSON, initialLessonProgress, initialTheoremState, isCompleted, nextExercise, recordProofResult, type Exercise } from "./tutorial";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -24,6 +24,17 @@ function renderContext(context: ProofStateView["goals"][number]["context"]): str
   return context.length ? context.map((entry) => `<div class="context-row"><code>${entry.name}</code><span>:</span><code>${entry.type}</code></div>`).join("") : `<p class="muted">No local assumptions.</p>`;
 }
 
+function renderProofState(display: DisplayProofState): string {
+  return `<section class="card proof-state-card"><div class="card-title">Props / Context</div><div class="context-list">${renderContext(display.props)}</div></section><section class="card goal-card"><div class="card-title">Goal</div><div class="goal-expression">${display.goal}</div></section>`;
+}
+
+function renderTactics(): string {
+  const suggestions = engine.tacticSuggestions();
+  const available = suggestions.filter((tactic) => tactic.id !== "exact" && tactic.id !== "apply");
+  const otherIds = ["exact", "apply", "rewrite", "induction"];
+  const other = otherIds.map((id) => TACTICS.find((tactic) => tactic.id === id)).filter((tactic): tactic is NonNullable<typeof tactic> => !!tactic);
+  return `<aside class="tactic-panel" aria-label="Available tactics"><div class="card-title">Available Tactics</div><div class="tactic-suggestions">${available.length ? available.map((tactic) => `<button class="tactic-suggestion" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.syntax.trim()}</code><span>${tactic.description}</span></button>`).join("") : `<p class="muted">No automatic suggestions.</p>`}</div><div class="tactic-other"><div class="card-title">Other Tactics</div>${other.map((tactic) => `<button class="tactic-other-item" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.label}</code></button>`).join("")}</div></aside>`;
+}
 function selectExercise(exercise: Exercise): void {
   currentExerciseId = exercise.id;
   state = initialTheoremState(exercise, (id) => engine.loadTheorem(id));
@@ -54,7 +65,7 @@ function render(): void {
         <div class="theorem-header"><div><div class="section-label">Chapter ${chapter.number} · Exercise ${exercise.number}</div><h1>${exercise.title}</h1><p class="theorem-statement"><code>${exercise.statement}</code></p></div></div>
         <section class="card"><div class="card-title">Prerequisites</div><div>${exercise.prerequisiteIds.length ? exercise.prerequisiteIds.join(" → ") : "None"}</div></section>
         <section class="card"><div class="card-title">Suggested path</div><code>${exercise.tacticHint}</code></section>
-        ${state ? `<section class="card goal-card"><div class="card-title">Focused Goal</div><div class="goal-expression">${state.goals[0]?.target ?? "No goals"}</div></section><section class="card"><div class="card-title">Context</div>${renderContext(state.goals[0]?.context ?? [])}</section><section class="card tactic-card"><div class="card-title">Tactic</div><input id="tactic-input" class="tactic-input" type="text" placeholder="intro, rfl, assumption, exact, apply, rewrite h, induction n" autocomplete="off" ${state.completed ? "disabled" : ""}/><button id="apply-button" class="apply-button" type="button" ${state.completed ? "disabled" : ""}>Apply</button></section>` : `<section class="card unavailable-state"><strong>Unavailable</strong><span>${exercise.availabilityNote}</span></section>`}
+        ${state && !state.completed && state.goals[0] ? `<div class="proof-layout"><div class="proof-main">${renderProofState(engine.displayProofState()!)}<section class="card tactic-card"><div class="card-title">Tactic</div><input id="tactic-input" class="tactic-input" type="text" placeholder="intro, rfl, assumption, exact, apply, rewrite h, induction n" autocomplete="off"/><button id="apply-button" class="apply-button" type="button">Apply</button></section></div>${renderTactics()}</div>` : state?.completed ? `<div class="completed-state"><strong>Proof accepted</strong><span>Accepted by the real Kernel.</span></div>` : `<section class="card unavailable-state"><strong>Unavailable</strong><span>${exercise.availabilityNote}</span></section>`}
         <section class="proof-state" aria-live="polite"><div><div class="card-title">Proof State</div><div class="state-message ${statusKind}">${statusMessage}</div></div><span class="goal-count">${state?.goals.length ?? 0} ${state?.goals.length === 1 ? "goal" : "goals"}</span></section>
         <section class="goals-list" aria-label="Proof goals">${renderGoals()}</section>
         ${state?.completed && next ? `<button id="next-button" class="next-button" type="button">Next exercise →</button>` : courseComplete ? `<div class="completed-state"><strong>Course complete</strong><span>All ten exercises have Kernel-backed accepted proofs.</span></div>` : ""}
@@ -75,7 +86,19 @@ function render(): void {
     render();
   };
   apply?.addEventListener("click", applyTactic);
+  root.querySelectorAll<HTMLButtonElement>("[data-tactic]").forEach((button) => button.addEventListener("click", () => {
+    const syntax = button.dataset.tactic ?? "";
+    if (syntax.endsWith(" ")) {
+      if (input) { input.value = syntax; input.focus(); }
+    } else {
+      if (input) input.value = syntax;
+      applyTactic();
+    }
+  }));
   input?.addEventListener("keydown", (event) => { if (event.key === "Enter") applyTactic(); });
 }
 
 render();
+
+
+

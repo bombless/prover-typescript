@@ -80,6 +80,25 @@ test("real engine rejects an invalid tactic and preserves the proof state", () =
   assert.deepEqual(result.state, before);
 });
 
+test("real engine exposes dynamic tactic suggestions from the Core goal", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("identity");
+  assert.deepEqual(engine.tacticSuggestions().map((tactic) => tactic.id), ["intro", "exact", "apply"]);
+  assert.equal(engine.runTactic("intro").kind, "success");
+  assert.deepEqual(engine.tacticSuggestions().map((tactic) => tactic.id), ["rfl", "induction", "exact", "apply"]);
+});
+
+test("display projection keeps Pi goals intact until intro changes Kernel state", () => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("identity");
+  assert.equal(initial.goals[0].context.length, 0);
+  assert.equal(engine.displayProofState()?.goal, "(n : Nat) → n = n");
+  const afterIntro = engine.runTactic("intro");
+  assert.equal(afterIntro.kind, "success");
+  assert.deepEqual(afterIntro.state.goals[0].context, [{ name: "n", type: "Nat" }]);
+  assert.equal(afterIntro.state.goals[0].target, "Eq Nat n n");
+  assert.deepEqual(engine.displayProofState(), { props: [{ name: "n", type: "Nat" }], goal: "n = n" });
+});
 test("real engine supports intro followed by rfl", () => {
   const engine = new RealProofEngine();
   engine.loadTheorem("identity");
@@ -119,3 +138,6 @@ test("real engine does not expose proof internals through its UI state", () => {
   assert.deepEqual(Object.keys(state.goals[0]), ["id", "target", "context"]);
   assert.equal("type" in state.goals[0], false);
 });
+
+
+

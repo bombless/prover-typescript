@@ -28,6 +28,11 @@ function renderProofState(display: DisplayProofState): string {
   return `<section class="card proof-state-card"><div class="card-title">Props / Context</div><div class="context-list">${renderContext(display.props)}</div></section><section class="card goal-card"><div class="card-title">Goal</div><div class="goal-expression">${display.goal}</div></section>`;
 }
 
+function renderTacticHistory(history: readonly string[]): string {
+  const escape = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<section class="card tactic-history"><div class="card-title">Tactic History</div>${history.length ? `<ol>${history.map((tactic) => `<li><code>${escape(tactic)}</code></li>`).join("")}</ol>` : `<p class="muted">No tactics applied yet.</p>`}</section>`;
+}
+
 function renderTactics(): string {
   const suggestions = engine.tacticSuggestions();
   const available = suggestions.filter((tactic) => tactic.id !== "exact" && tactic.id !== "apply");
@@ -66,7 +71,7 @@ function render(): void {
         <div class="theorem-header"><div><div class="section-label">Chapter ${chapter.number} · Exercise ${exercise.number}</div><h1>${exercise.title}</h1><p class="theorem-statement"><code>${exercise.statement}</code></p></div></div>
         <section class="card"><div class="card-title">Prerequisites</div><div>${exercise.prerequisiteIds.length ? exercise.prerequisiteIds.join(" → ") : "None"}</div></section>
         <section class="card"><div class="card-title">Suggested path</div><code>${exercise.tacticHint}</code></section>
-        ${state && !state.completed && state.goals[0] ? `<div class="proof-layout"><div class="proof-main">${renderProofState(engine.displayProofState()!)}<section class="card tactic-card"><div class="card-title">Tactic</div><input id="tactic-input" class="tactic-input" type="text" placeholder="intro, rfl, assumption, exact, apply, rewrite h, induction n" autocomplete="off"/><button id="apply-button" class="apply-button" type="button">Apply</button></section></div>${renderTactics()}</div>` : state?.completed ? `<div class="completed-state"><strong>Proof accepted</strong><span>Accepted by the real Kernel.</span></div>` : `<section class="card unavailable-state"><strong>Unavailable</strong><span>${exercise.availabilityNote}</span></section>`}
+        ${state && !state.completed && state.goals[0] ? `<div class="proof-layout"><div class="proof-main">${renderProofState(engine.displayProofState()!)}${renderTacticHistory(engine.tacticHistory())}<section class="card tactic-card"><div class="card-title">Tactic</div><input id="tactic-input" class="tactic-input" type="text" placeholder="intro, rfl, assumption, exact, apply, rewrite h, induction n" autocomplete="off"/><button id="apply-button" class="apply-button" type="button">Apply</button></section></div>${renderTactics()}</div>` : state?.completed ? `<div class="completed-state"><strong>Proof accepted</strong><span>Accepted by the real Kernel.</span></div>` : `<section class="card unavailable-state"><strong>Unavailable</strong><span>${exercise.availabilityNote}</span></section>`}
         <section class="proof-state" aria-live="polite"><div><div class="card-title">Proof State</div><div class="state-message ${statusKind}">${statusMessage}</div></div><span class="goal-count">${state?.goals.length ?? 0} ${state?.goals.length === 1 ? "goal" : "goals"}</span></section>
         <section class="goals-list" aria-label="Proof goals">${renderGoals()}</section>
         ${state?.completed && next ? `<button id="next-button" class="next-button" type="button">Next exercise →</button>` : courseComplete ? `<div class="completed-state"><strong>Course complete</strong><span>All ten exercises have Kernel-backed accepted proofs.</span></div>` : ""}

@@ -23,7 +23,7 @@ export interface TacticDescriptor {
   canApply: (goal: import("../proof/state").Goal) => boolean;
 }
 export type ProofResult = { kind: "success"; state: ProofStateView; message?: string } | { kind: "error"; message: string; state: ProofStateView };
-export interface ProofEngine { loadTheorem(id: string): ProofStateView; runTactic(tactic: string): ProofResult; tacticSuggestions(): TacticDescriptor[]; }
+export interface ProofEngine { loadTheorem(id: string): ProofStateView; runTactic(tactic: string): ProofResult; tacticSuggestions(): TacticDescriptor[]; tacticHistory(): string[]; }
 
 interface MockTheorem { name: string; goals: GoalView[]; }
 const MOCK_THEOREMS: Record<string, MockTheorem> = {
@@ -46,6 +46,7 @@ export class MockProofEngine implements ProofEngine {
   private state = initialState(MOCK_THEOREMS.n_plus_zero);
   loadTheorem(id: string): ProofStateView { const theorem = MOCK_THEOREMS[id] ?? MOCK_THEOREMS.n_plus_zero; this.state = initialState(theorem); return cloneMockState(this.state); }
   tacticSuggestions(): TacticDescriptor[] { return []; }
+  tacticHistory(): string[] { return []; }
   runTactic(tactic: string): ProofResult {
     const normalized = tactic.trim().toLowerCase();
     if (!normalized) return { kind: "error", message: "Enter a tactic before applying it.", state: cloneMockState(this.state) };
@@ -189,11 +190,13 @@ function parseArgument(source: string, context: readonly { name: string }[]): Co
 export class RealProofEngine implements ProofEngine {
   private theoremName = "zero";
   private session: TacticSession = tacticSession(proofState([{ context: [], type: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Zero" }, right: { kind: "Zero" } } }]));
+  private history: string[] = [];
 
   loadTheorem(id: string): ProofStateView {
     const theorem = REAL_THEOREMS[id] ?? REAL_THEOREMS.zero;
     this.theoremName = theorem.name;
     this.session = tacticSession(proofState([{ context: [], type: theorem.type }]));
+    this.history = [];
     return cloneView(toView(this.theoremName, this.session.state));
   }
 
@@ -201,6 +204,8 @@ export class RealProofEngine implements ProofEngine {
     const goal = this.session.currentGoal();
     return goal ? tacticSuggestionsForGoal(goal) : [];
   }
+
+  tacticHistory(): string[] { return [...this.history]; }
 
   displayProofState(): DisplayProofState | null {
     const goal = this.session.currentGoal();
@@ -258,6 +263,7 @@ export class RealProofEngine implements ProofEngine {
         default:
           throw new TacticError(`Unknown tactic: ${name}`);
       }
+      this.history.push(source);
       const state = toView(this.theoremName, this.session.state);
       if (state.completed) {
         this.session.proof();

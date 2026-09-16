@@ -72,6 +72,15 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .goal-expression { margin-top: 15px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 24px; }
 .context-row { display: flex; gap: 10px; margin-top: 13px; color: #778293; }
 .context-row code { color: #273449; }
+.tactic-history ol {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.tactic-history li {
+  margin: 0.35rem 0;
+}
+
 .tactic-card { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
 .tactic-card .card-title { grid-column: 1 / -1; }
 .tactic-input { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #cfd6df; border-radius: 7px; outline: none; }

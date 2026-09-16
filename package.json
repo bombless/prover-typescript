@@ -9,7 +9,7 @@
     "build:web": "vite build",
     "dev:web": "vite --host 127.0.0.1",
     "test": "npm run build && node --test dist/tests/*.test.js dist/tests/kernel/*.test.js dist/tests/elaborator/*.test.js dist/tests/parser/*.test.js",
-    "start": "node dist/src/index.js"
+    "start": "node server.cjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

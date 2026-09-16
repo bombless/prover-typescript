@@ -88,16 +88,25 @@ test("real engine exposes dynamic tactic suggestions from the Core goal", () => 
   assert.deepEqual(engine.tacticSuggestions().map((tactic) => tactic.id), ["rfl", "induction", "exact", "apply"]);
 });
 
-test("display projection keeps Pi goals intact until intro changes Kernel state", () => {
+test("display projection presents Pi binders as props while preserving the Kernel state", () => {
   const engine = new RealProofEngine();
   const initial = engine.loadTheorem("identity");
   assert.equal(initial.goals[0].context.length, 0);
-  assert.equal(engine.displayProofState()?.goal, "(n : Nat) → n = n");
+  assert.deepEqual(engine.displayProofState(), { props: [{ name: "n", type: "Nat" }], goal: "n = n" });
   const afterIntro = engine.runTactic("intro");
   assert.equal(afterIntro.kind, "success");
   assert.deepEqual(afterIntro.state.goals[0].context, [{ name: "n", type: "Nat" }]);
   assert.equal(afterIntro.state.goals[0].target, "Eq Nat n n");
   assert.deepEqual(engine.displayProofState(), { props: [{ name: "n", type: "Nat" }], goal: "n = n" });
+});
+
+test("display projection renders Chapter 2 n + 0 as props plus goal", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("add_zero");
+  assert.deepEqual(engine.displayProofState(), {
+    props: [{ name: "n", type: "Nat" }],
+    goal: "n + 0 = n",
+  });
 });
 test("real engine supports intro followed by rfl", () => {
   const engine = new RealProofEngine();

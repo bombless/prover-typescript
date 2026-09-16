@@ -4,7 +4,7 @@ import { proofState, type ProofState } from "../proof/state";
 import { tacticSession, TacticError, type TacticSession } from "../proof/tactic";
 import { show } from "../kernel/typecheck";
 import { type Term as CoreTerm, Nat, Zero, variable, pi, eq, app } from "../syntax/ast";
-import { addTerm } from "../library/nat";
+import { add, addTerm } from "../library/nat";
 import { addZeroType } from "../library/add-zero";
 import { zeroAddType } from "../library/zero-add";
 import { succAddType } from "../library/succ-add";
@@ -92,16 +92,48 @@ function cloneView(state: ProofStateView): ProofStateView {
   return { theoremName: state.theoremName, completed: state.completed, goals: state.goals.map((goal) => ({ id: goal.id, target: goal.target, context: goal.context.map((entry) => ({ ...entry })) })) };
 }
 
-export function showDisplayTerm(term: CoreTerm): string {
+function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): string {
   switch (term.kind) {
-    case "Pi": return `(${term.name ?? "x"} : ${showDisplayTerm(term.domain)}) → ${showDisplayTerm(term.body)}`;
-    case "Eq": return `${showDisplayTerm(term.left)} = ${showDisplayTerm(term.right)}`;
+    case "Type": return "Type";
+    case "Nat": return "Nat";
+    case "Zero": return "0";
+    case "Succ": return `Succ ${formatDisplayTerm(term.value, boundNames)}`;
+    case "Var": return term.name ?? boundNames[term.index] ?? `#${term.index}`;
+    case "Pi": {
+      const name = term.name ?? `x${boundNames.length + 1}`;
+      return `(${name} : ${formatDisplayTerm(term.domain, boundNames)}) → ${formatDisplayTerm(term.body, [name, ...boundNames])}`;
+    }
+    case "Eq": return `${formatDisplayTerm(term.left, boundNames)} = ${formatDisplayTerm(term.right, boundNames)}`;
+    case "App": {
+      // `add` is encoded as a dependent lambda/recursor in Core, but users
+      // should see the surface notation in the tutorial.
+      if (term.fn.kind === "App" && term.fn.fn === add) {
+        return `${formatDisplayTerm(term.fn.arg, boundNames)} + ${formatDisplayTerm(term.arg, boundNames)}`;
+      }
+      return `(${formatDisplayTerm(term.fn, boundNames)} ${formatDisplayTerm(term.arg, boundNames)})`;
+    }
     default: return show(term);
   }
 }
 
+export function showDisplayTerm(term: CoreTerm): string {
+  return formatDisplayTerm(term);
+}
+
 export function projectGoal(goal: import("../proof/state").Goal): DisplayProofState {
-  return { props: goal.context.map((entry) => ({ name: entry.name, type: showDisplayTerm(entry.type) })), goal: showDisplayTerm(goal.type) };
+  const props = goal.context.map((entry) => ({ name: entry.name, type: showDisplayTerm(entry.type) }));
+  let target = whnf(goal.type);
+
+  // Keep the kernel state unchanged, but present intro-able binders as
+  // tutorial-friendly props. Thus `(n : Nat) → n + 0 = n` is displayed as
+  // `Props: n : Nat` and `Goal: n + 0 = n`, while `intro` remains the real
+  // operation that moves the binder into the proof context.
+  while (target.kind === "Pi") {
+    props.push({ name: target.name ?? `x${props.length + 1}`, type: showDisplayTerm(target.domain) });
+    target = whnf(target.body);
+  }
+
+  return { props, goal: formatDisplayTerm(target, props.map((entry) => entry.name).reverse()) };
 }
 
 function canIntro(goal: import("../proof/state").Goal): boolean { return whnf(goal.type).kind === "Pi"; }

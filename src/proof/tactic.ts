@@ -1,6 +1,6 @@
 import { check, infer, show } from '../kernel/typecheck';
 import { definitionalEqual, shift, whnf } from '../kernel/reduction';
-import { Term, app, lambda, refl, variable } from '../syntax/ast';
+import { Term, app, eqRec, lambda, refl, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
 import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
@@ -13,7 +13,8 @@ type ProofNode =
   | { readonly kind: 'hole'; readonly id: GoalId }
   | { readonly kind: 'term'; readonly term: Term; readonly depth: number }
   | { readonly kind: 'lambda'; readonly domain: Term; readonly name?: string; readonly body: ProofNode }
-  | { readonly kind: 'app'; readonly fn: ProofNode; readonly arg: ProofNode };
+  | { readonly kind: 'app'; readonly fn: ProofNode; readonly arg: ProofNode }
+  | { readonly kind: 'eqRec'; readonly motive: Term; readonly left: Term; readonly right: Term; readonly equality: Term; readonly reflCase: ProofNode };
 
 interface Hole { readonly id: GoalId; readonly goal: Goal; readonly depth: number; }
 
@@ -21,11 +22,64 @@ type ProofStateInput = ProofState | { readonly goals: readonly Goal[]; readonly 
 
 function contextTypes(context: Context): readonly Term[] { return context.map((entry) => entry.type); }
 
+function abstractEqualityTarget(term: Term, pattern: Term, depth = 0): { readonly term: Term; readonly found: boolean } {
+  if (definitionalEqual(term, pattern)) return { term: variable(depth), found: true };
+  switch (term.kind) {
+    case 'Type': case 'Nat': case 'Zero': case 'Var': return { term, found: false };
+    case 'Pi': {
+      const domain = abstractEqualityTarget(term.domain, pattern, depth);
+      const body = abstractEqualityTarget(term.body, shift(pattern, 1), depth + 1);
+      return { term: { ...term, domain: domain.term, body: body.term }, found: domain.found || body.found };
+    }
+    case 'Lambda': {
+      const domain = abstractEqualityTarget(term.domain, pattern, depth);
+      const body = abstractEqualityTarget(term.body, shift(pattern, 1), depth + 1);
+      return { term: { ...term, domain: domain.term, body: body.term }, found: domain.found || body.found };
+    }
+    case 'App': {
+      const fn = abstractEqualityTarget(term.fn, pattern, depth);
+      const arg = abstractEqualityTarget(term.arg, pattern, depth);
+      return { term: app(fn.term, arg.term), found: fn.found || arg.found };
+    }
+    case 'Succ': {
+      const value = abstractEqualityTarget(term.value, pattern, depth);
+      return { term: { ...term, value: value.term }, found: value.found };
+    }
+    case 'NatRec': {
+      const motive = abstractEqualityTarget(term.motive, pattern, depth);
+      const zeroCase = abstractEqualityTarget(term.zeroCase, pattern, depth);
+      const succCase = abstractEqualityTarget(term.succCase, pattern, depth);
+      const scrutinee = abstractEqualityTarget(term.scrutinee, pattern, depth);
+      return { term: { ...term, motive: motive.term, zeroCase: zeroCase.term, succCase: succCase.term, scrutinee: scrutinee.term }, found: motive.found || zeroCase.found || succCase.found || scrutinee.found };
+    }
+    case 'Eq': {
+      const type = abstractEqualityTarget(term.type, pattern, depth);
+      const left = abstractEqualityTarget(term.left, pattern, depth);
+      const right = abstractEqualityTarget(term.right, pattern, depth);
+      return { term: { ...term, type: type.term, left: left.term, right: right.term }, found: type.found || left.found || right.found };
+    }
+    case 'Refl': {
+      const type = abstractEqualityTarget(term.type, pattern, depth);
+      const value = abstractEqualityTarget(term.value, pattern, depth);
+      return { term: { ...term, type: type.term, value: value.term }, found: type.found || value.found };
+    }
+    case 'EqRec': {
+      const motive = abstractEqualityTarget(term.motive, pattern, depth);
+      const reflCase = abstractEqualityTarget(term.reflCase, pattern, depth);
+      const left = abstractEqualityTarget(term.left, pattern, depth);
+      const right = abstractEqualityTarget(term.right, pattern, depth);
+      const equality = abstractEqualityTarget(term.equality, pattern, depth);
+      return { term: { ...term, motive: motive.term, reflCase: reflCase.term, left: left.term, right: right.term, equality: equality.term }, found: motive.found || reflCase.found || left.found || right.found || equality.found };
+    }
+  }
+}
+
 function replaceNode(root: ProofNode, id: GoalId, replacement: ProofNode): ProofNode {
   if (root.kind === 'hole') return root.id === id ? replacement : root;
   if (root.kind === 'term') return root;
   if (root.kind === 'lambda') return { ...root, body: replaceNode(root.body, id, replacement) };
-  return { kind: 'app', fn: replaceNode(root.fn, id, replacement), arg: replaceNode(root.arg, id, replacement) };
+  if (root.kind === 'app') return { kind: 'app', fn: replaceNode(root.fn, id, replacement), arg: replaceNode(root.arg, id, replacement) };
+  return { ...root, reflCase: replaceNode(root.reflCase, id, replacement) };
 }
 
 function compile(root: ProofNode, depth = 0): Term {
@@ -34,6 +88,7 @@ function compile(root: ProofNode, depth = 0): Term {
     case 'term': return shift(root.term, depth - root.depth);
     case 'lambda': return lambda(root.domain, compile(root.body, depth + 1), root.name);
     case 'app': return app(compile(root.fn, depth), compile(root.arg, depth));
+    case 'eqRec': return eqRec(root.motive, compile(root.reflCase, depth), root.left, root.right, root.equality);
   }
 }
 
@@ -102,6 +157,35 @@ export class TacticSession {
     if (type.kind !== 'Eq') throw new TacticError(`rfl expected an equality goal, found ${show(type)}`);
     if (!definitionalEqual(type.left, type.right)) throw new TacticError(`rfl requires definitionally equal endpoints: ${show(type.left)} and ${show(type.right)}`);
     return this.exact(refl(type.type, type.left));
+  }
+
+  rewrite(equalityProof: Term): TacticSession {
+    const hole = this.firstHole();
+    let equalityType: Term;
+    try { equalityType = whnf(infer(contextTypes(hole.goal.context), equalityProof)); }
+    catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+    if (equalityType.kind !== 'Eq') throw new TacticError(`rewrite expected an equality proof, found ${show(equalityType)}`);
+
+    const abstraction = abstractEqualityTarget(shift(hole.goal.type, 1), shift(equalityType.left, 1));
+    if (!abstraction.found) throw new TacticError(`rewrite found no match for ${show(equalityType.left)} in ${show(hole.goal.type)}`);
+
+    const motive = lambda(equalityType.type, abstraction.term);
+    const rewrittenType = whnf(app(motive, equalityType.right));
+    const childGoal = goal(hole.goal.context, rewrittenType, hole.goal.caseName);
+    const child = { id: childGoal.id!, goal: childGoal, depth: hole.depth };
+    const symmetryMotive = lambda(equalityType.type, {
+      kind: 'Eq', type: shift(equalityType.type, 1), left: variable(0), right: shift(equalityType.left, 1),
+    });
+    const symmetryProof = eqRec(symmetryMotive, refl(equalityType.type, equalityType.left), equalityType.left, equalityType.right, equalityProof);
+    const root = replaceNode(this.root, hole.id, {
+      kind: 'eqRec',
+      motive,
+      left: equalityType.right,
+      right: equalityType.left,
+      equality: symmetryProof,
+      reflCase: { kind: 'hole', id: child.id },
+    });
+    return this.withReplacement(hole.id, [child], root);
   }
 
   assumption(): TacticSession {

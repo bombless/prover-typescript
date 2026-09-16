@@ -367,3 +367,66 @@ git diff --check   -> success
 ```
 
 M20 is complete. Stop here; do not begin M21 automatically.
+
+## Milestone 21 — Rewrite
+
+M21 adds bounded single-equality rewriting in the Proof Engine using the existing Core equality infrastructure and `EqRec`.
+
+The proof path is:
+
+```text
+rewrite h
+    ↓
+inspect h : Eq A a b
+    ↓
+abstract the target into a dependent motive
+    ↓
+construct Core EqRec proof terms
+    ↓
+TacticSession.proof()
+    ↓
+Kernel inference/check
+```
+
+The user-facing rewrite transition is forward: a goal containing the equality's left endpoint is transformed to the corresponding goal containing its right endpoint. The proof construction internally derives equality symmetry with the existing `EqRec` primitive so the final proof term is accepted by the unchanged Kernel.
+
+Implemented and tested:
+
+```text
+single equality rewrite
+rewrite through application
+rewrite in equality goals
+Kernel-backed EqRec proof construction
+non-equality hypothesis rejection
+missing-match rejection
+failed rewrite rollback
+scope-safe dependent motive construction
+```
+
+M21 does not modify `src/kernel/`. It does not add a rewrite primitive, second metavariable system, second unifier, or UI state. No UI changes were required.
+
+M21 explicitly does not implement:
+
+```text
+induction
+simp
+ring
+automation
+rewrite search
+rewrite database
+recursive rewriting
+normalization engine
+typeclass inference
+general-purpose elaboration
+UI-5
+UI-6
+```
+
+### Verification
+
+```text
+npm run build -> success
+npm test -> 177 tests / 177 passed / 0 failed
+```
+
+M21 is complete. Stop here; do not begin M22 automatically.

@@ -44,6 +44,50 @@ test('rfl rejects a non-definitional equality', () => {
   assert.throws(() => tacticSession(initialProofState(goal)).rfl(), /rfl requires/);
 });
 
+test('M21 rewrite changes a predicate target through an equality proof', () => {
+  const predicate = pi(Nat, Type, 'P');
+  const equality = eq(Nat, variable(1, 'a'), variable(0, 'b'));
+  const target = app(variable(3, 'P'), variable(2, 'a'));
+  const state = { goals: [{ context: [
+    { name: 'P', type: predicate },
+    { name: 'a', type: Nat },
+    { name: 'b', type: Nat },
+    { name: 'h', type: equality },
+  ], type: target }] };
+  const session = tacticSession(state).rewrite(variable(0, 'h'));
+  assert.deepEqual(session.state.goals[0].type, app(variable(3, 'P'), variable(1, 'b')));
+});
+
+test('M21 rewrite constructs a Kernel-checkable EqRec proof', () => {
+  const equality = eq(Nat, variable(1, 'a'), variable(0, 'b'));
+  const fType = pi(Nat, Nat, 'x');
+  const target = eq(Nat, app(variable(3, 'f'), variable(2, 'a')), app(variable(3, 'f'), variable(2, 'a')));
+  const state = { goals: [{ context: [
+    { name: 'f', type: fType },
+    { name: 'a', type: Nat },
+    { name: 'b', type: Nat },
+    { name: 'h', type: equality },
+  ], type: target }] };
+  const completed = tacticSession(state).rewrite(variable(0, 'h')).rfl();
+  const proof = completed.proof();
+  assert.equal(proof.kind, 'EqRec');
+  assert.ok(definitionalEqual(infer(state.goals[0].context.map((entry) => entry.type), proof), target));
+});
+
+test('M21 rewrite rejects non-equality hypotheses and missing matches without mutation', () => {
+  const nonEquality = { goals: [{ context: [{ name: 'h', type: Nat }], type: Nat }] };
+  const session = tacticSession(nonEquality);
+  const before = session.state;
+  assert.throws(() => session.rewrite(variable(0, 'h')), /rewrite expected an equality proof/);
+  assert.equal(session.state, before);
+
+  const equality = eq(Nat, variable(0, 'a'), variable(0, 'a'));
+  const missing = tacticSession({ goals: [{ context: [{ name: 'a', type: Nat }, { name: 'h', type: equality }], type: Nat }] });
+  const missingBefore = missing.state;
+  assert.throws(() => missing.rewrite(variable(0, 'h')), /rewrite found no match/);
+  assert.equal(missing.state, missingBefore);
+});
+
 test('assumption finds a matching local hypothesis and fails otherwise', () => {
   const hypothesisType = eq(Nat, variable(0, 'n'), variable(0, 'n'));
   const goalType = eq(Nat, variable(1, 'n'), variable(1, 'n'));

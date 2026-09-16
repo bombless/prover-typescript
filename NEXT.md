@@ -322,3 +322,68 @@ git diff --check   -> success
 ```
 
 M20 is complete and committed independently. Stop here; do not begin M21 automatically.
+
+## M21 — Rewrite — complete
+
+M21 adds bounded single-equality rewriting in the Proof Engine using the existing Core equality infrastructure.
+
+Implemented path:
+
+```text
+rewrite equality proof
+    ↓
+inspect Eq type and locate the left endpoint in the target
+    ↓
+construct a dependent motive
+    ↓
+construct ordinary Core EqRec proof terms
+    ↓
+TacticSession.proof()
+    ↓
+Kernel inference/check
+```
+
+The rewrite tactic preserves the Proof Engine / Kernel boundary. The Kernel was not modified and does not understand the `rewrite` tactic. Reverse orientation is implemented internally through an EqRec-derived equality symmetry proof so the user-facing operation remains a forward `rewrite h` transition from the old target to the rewritten target.
+
+Implemented and tested:
+
+```text
+single equality rewrite
+rewrite through application
+rewrite in equality targets
+Kernel-backed EqRec proof construction
+non-equality hypothesis rejection
+missing-match rejection
+failed rewrite without state mutation
+scope-safe dependent motive construction
+```
+
+M21 reuses the existing `Eq`, `Refl`, `EqRec`, definitional equality, Core type checking, and ProofState machinery. No second metavariable or unification infrastructure was added. No UI changes were required.
+
+Explicitly not implemented:
+
+```text
+induction
+simp
+ring
+automation
+rewrite search
+rewrite database
+recursive rewriting
+normalization engine
+typeclass inference
+general-purpose elaboration
+UI-5
+UI-6
+```
+
+### Verification
+
+```text
+npm run build      -> success
+npm test           -> 177 tests / 177 passed / 0 failed
+npm run build:web  -> success
+npm run git checks -> success
+```
+
+M21 is complete at the Proof Engine/test level and must be independently verified, documented, committed, then stopped. Do not begin M22 automatically.

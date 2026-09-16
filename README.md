@@ -193,3 +193,18 @@ npm test          -> 130 tests / 130 passed / 0 failed
 ```
 
 UI-1 is complete. Stop here; do not begin UI-2 automatically.
+## UI-2 — Mock Proof Interaction
+
+UI-2 is complete. The browser UI now talks to a UI-facing `ProofEngine` abstraction backed by an isolated `MockProofEngine`. The UI exposes theorem selection, tactic input, Apply, mock proof-state updates, user-facing errors, completion state, and basic multiple-goal display.
+
+The mock boundary deliberately exposes only `ProofStateView`, `GoalView`, context display data, and `ProofResult`; it does not expose `MetaContext`, assignments, or Core terms. Successful mock results are labeled `Prototype / Mock Mode` and never claim Kernel acceptance.
+
+### Verification
+
+```text
+npm run build:web -> success
+npm run build     -> success
+npm test          -> 146 tests / 146 passed / 0 failed
+```
+
+UI-2 is complete. Stop here; do not begin UI-3 automatically.

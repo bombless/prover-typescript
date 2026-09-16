@@ -87,3 +87,25 @@ M19 — Unification
 ```
 
 本上下文到此停止，不自动开始 M19。
+
+## UI-2 — Mock Proof Interaction — complete
+
+UI-2 adds the browser-facing `ProofEngine` abstraction and an isolated `MockProofEngine` under `src/ui/`. The UI now supports theorem selection, tactic input / Apply, mock Proof State updates, readable error messages, explicit `Prototype / Mock Mode`, completion display, and multiple goals.
+
+The UI-facing model contains only presentation data (`ProofStateView`, `GoalView`, `ContextEntryView`) and never exposes Proof Engine internals such as `MetaContext`, assignments, or Core terms. Mock success is explicitly not Kernel acceptance.
+
+### Verification
+
+```text
+npm run build     -> success
+npm test          -> 146 tests / 146 passed / 0 failed
+npm run build:web -> success
+```
+
+### Next stage
+
+```text
+UI-3 — Real Proof Engine Adapter
+```
+
+Do not begin UI-3 automatically.

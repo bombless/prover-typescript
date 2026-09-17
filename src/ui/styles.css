@@ -70,6 +70,36 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .card-title { color: #6f7989; font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .goal-card { padding-top: 18px; }
 .goal-expression { margin-top: 15px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 24px; }
+.proof-expression {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px 0 3px 1.5rem;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  white-space: normal;
+  line-height: 1.65;
+  text-indent: -1.5rem;
+}
+.proof-expression wbr { display: inline; }
+.context-row { min-width: 0; }
+.context-row > .proof-expression { flex: 1 1 auto; }
+.bracket-pair { font-weight: 750; transition: background-color .12s ease, text-shadow .12s ease; }
+.bracket-pair:hover { text-shadow: 0 0 0.55em currentColor; }
+.bracket-color-0 { color: #d14d72; }
+.bracket-color-1 { color: #b7791f; }
+.bracket-color-2 { color: #4f7d61; }
+.bracket-color-3 { color: #3f6fa8; }
+.bracket-color-4 { color: #7a5aa6; }
+.bracket-color-5 { color: #b04f8a; }
+.context-row .proof-expression {
+  margin: 0;
+  padding: 0;
+  text-indent: 0;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
 .context-row { display: flex; gap: 10px; margin-top: 13px; color: #778293; }
 .context-row code { color: #273449; }
 .tactic-history ol {
@@ -138,4 +168,4 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .tactic-other-item { display: block; width: 100%; padding: 7px 0; background: transparent; color: #667386; text-align: left; cursor: pointer; }
 .tactic-other-item:hover { color: #273449; }
 
-
+pre.proof-expression { white-space: pre-wrap; word-break:keep-all; }

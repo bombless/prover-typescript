@@ -179,7 +179,10 @@ function toView(theoremName: string, state: ProofState): ProofStateView {
   return {
     theoremName,
     completed: state.goals.length === 0,
-    goals: state.goals.map((goal) => ({ id: String(goal.id), target: show(goal.type), context: goal.context.map((entry) => ({ name: entry.name, type: show(entry.type) })) })),
+    goals: state.goals.map((goal) => {
+      const display = projectGoal(goal);
+      return { id: String(goal.id), target: display.goal, context: display.props };
+    }),
   };
 }
 

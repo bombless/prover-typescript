@@ -67,6 +67,11 @@ export function renderBracketedExpression(source: string): string {
     else lines[lines.length - 1] += (lines[lines.length - 1].trim() ? " " : "") + escape(normalized);
   };
 
+  const appendInline = (lines: string[], html: string, indent: number): void => {
+    if (!lines.length) lines.push(" ".repeat(indent) + html);
+    else lines[lines.length - 1] += (lines[lines.length - 1].trim() ? " " : "") + html;
+  };
+
   const renderChildren = (children: Array<Group | TextNode>, indent: number): string[] => {
     const lines: string[] = [];
     let lineEnded = false;
@@ -88,8 +93,7 @@ export function renderBracketedExpression(source: string): string {
       const close = bracket(child.close);
 
       if (!hasNestedGroup(child)) {
-        lines.push(" ".repeat(indent) + open + escape(source.slice(child.open + 1, child.close)) + close);
-        lineEnded = true;
+        appendInline(lines, open + escape(source.slice(child.open + 1, child.close)) + close, indent);
         continue;
       }
 
@@ -108,6 +112,6 @@ export function renderBracketedExpression(source: string): string {
   const lines = renderChildren(root, 0);
   const rootGroups = root.filter((child): child is Group => "open" in child);
   const hasMultilineGroup = rootGroups.some((group) => hasNestedGroup(group));
-  const needsTrailingNewline = hasMultilineGroup || rootGroups.length > 1;
+  const needsTrailingNewline = hasMultilineGroup;
   return lines.join("\n") + (needsTrailingNewline ? "\n" : "");
 }

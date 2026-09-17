@@ -22,10 +22,11 @@ z`);
 test("nested group keeps outer opener inline but puts its body after a newline", () => {
   const result = text(renderBracketedExpression("f (g (x)) z"));
   assert.equal(result, `f
-  (
-    g
-    (x)
-  )
+(
+  g
+  (x)
+)
+z
 `
 );
 });
@@ -33,11 +34,12 @@ test("nested group keeps outer opener inline but puts its body after a newline",
 test("nested groups recursively apply the same rule", () => {
   const result = text(renderBracketedExpression("f (g (x + y) z) q"));
   assert.equal(result, `f
-  (
-    g
-    (x + y)
-    z
-  )
+(
+  g
+  (x + y)
+  z
+)
+q
 `);
 });
 
@@ -46,19 +48,20 @@ test("multiple flat groups are expanded independently", () => {
   assert.equal(result, `f
 (x)
 (y)
-z`);
+z
+`);
 });
 
 test("deep nesting preserves the per-group line rules", () => {
   const result = text(renderBracketedExpression("f (a (b (c)))"));
   assert.equal(result, `f
+(
+  a
   (
-    a
-      (
-        b
-        (c)
-      )
+    b
+    (c)
   )
+)
 `);
 });
 

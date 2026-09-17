@@ -72,7 +72,9 @@ test("induction creates base, successor, and real IH context", () => {
   assert.equal(result.state.goals.length, 2);
   assert.equal(result.state.goals[0].context.length, 0);
   assert.equal(result.state.goals[1].context.at(-1)?.name, "IH");
-  assert.match(result.state.goals[1].context.at(-1)?.type ?? "", /Eq Nat/);
+  // The proof engine stores the real Core equality, while the UI view intentionally
+  // projects it to surface notation for tutorial users.
+  assert.equal(result.state.goals[1].context.at(-1)?.type, "n + 0 = n");
 });
 
 test("bad induction variable leaves the proof state unchanged", () => {

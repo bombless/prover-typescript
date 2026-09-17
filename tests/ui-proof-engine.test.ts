@@ -96,7 +96,7 @@ test("display projection keeps Pi binders out of context until intro", () => {
   const afterIntro = engine.runTactic("intro");
   assert.equal(afterIntro.kind, "success");
   assert.deepEqual(afterIntro.state.goals[0].context, [{ name: "n", type: "Nat" }]);
-  assert.equal(afterIntro.state.goals[0].target, "Eq Nat n n");
+  assert.equal(afterIntro.state.goals[0].target, "n = n");
   assert.deepEqual(engine.displayProofState(), { props: [{ name: "n", type: "Nat" }], goal: "n = n" });
 });
 
@@ -122,6 +122,21 @@ test("display projection renders the induction hypothesis using surface notation
     ],
     goal: "Succ n + 0 = Succ n",
   });
+});
+
+test("rewrite keeps an induction hypothesis as an equality", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("add_succ");
+  for (const tactic of ["intro", "intro", "induction x", "induction n", "rfl"]) {
+    const result = engine.runTactic(tactic);
+    assert.equal(result.kind, "success", result.kind === "error" ? `${tactic}: ${result.message}` : "");
+  }
+  const rewritten = engine.runTactic("rewrite IH");
+  assert.equal(rewritten.kind, "success", rewritten.kind === "error" ? rewritten.message : "");
+  assert.equal(rewritten.state.goals[0].context[1].name, "IH");
+  assert.equal(rewritten.state.goals[0].context[1].type, "n + Succ 0 = Succ n + 0");
+  assert.equal(rewritten.state.goals[0].target, "Succ (Succ n + 0) = Succ (Succ n + 0)");
+  assert.equal(engine.runTactic("rfl").kind, "success");
 });
 test("real engine supports intro followed by rfl", () => {
   const engine = new RealProofEngine();

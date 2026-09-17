@@ -103,11 +103,19 @@ function isAddRecursor(term: Extract<CoreTerm, { kind: "NatRec" }>): boolean {
 }
 
 function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): string {
+  const formatAddOperand = (operand: CoreTerm): string => {
+    const rendered = formatDisplayTerm(operand, boundNames);
+    return operand.kind === "Succ" && operand.value.kind === "App" ? `(${rendered})` : rendered;
+  };
+
   switch (term.kind) {
     case "Type": return "Type";
     case "Nat": return "Nat";
     case "Zero": return "0";
-    case "Succ": return `Succ ${formatDisplayTerm(term.value, boundNames)}`;
+    case "Succ": {
+      const rendered = formatDisplayTerm(term.value, boundNames);
+      return term.value.kind === "App" || term.value.kind === "Succ" ? `Succ (${rendered})` : `Succ ${rendered}`;
+    }
     case "Var": return term.name ?? boundNames[term.index] ?? `#${term.index}`;
     case "Pi": {
       const name = term.name ?? `x${boundNames.length + 1}`;
@@ -118,7 +126,7 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
       // `add` is encoded as a dependent lambda/recursor in Core, but users
       // should see the surface notation in the tutorial.
       if (term.fn.kind === "App" && term.fn.fn === add) {
-        return `${formatDisplayTerm(term.fn.arg, boundNames)} + ${formatDisplayTerm(term.arg, boundNames)}`;
+        return `${formatAddOperand(term.fn.arg)} + ${formatAddOperand(term.arg)}`;
       }
       return `(${formatDisplayTerm(term.fn, boundNames)} ${formatDisplayTerm(term.arg, boundNames)})`;
     }
@@ -137,7 +145,11 @@ export function showDisplayTerm(term: CoreTerm): string {
 }
 
 export function projectGoal(goal: import("../proof/state").Goal): DisplayProofState {
-  const props = goal.context.map((entry) => ({ name: entry.name, type: showDisplayTerm(entry.type) }));
+  const props = goal.context.map((entry, index) => ({
+    name: entry.name,
+    // A declaration type is scoped only by locals that precede it.
+    type: formatDisplayTerm(entry.type, goal.context.slice(0, index).map((item) => item.name).reverse()),
+  }));
 
   // Keep the UI context faithful to the real proof context: a Pi binder is
   // not a local assumption until `intro` actually moves it into the context.

@@ -191,7 +191,12 @@ export class TacticSession {
     catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
     if (equalityType.kind !== 'Eq') throw new TacticError(`rewrite expected an equality proof, found ${show(equalityType)}`);
 
-    const abstraction = abstractEqualityTarget(shift(hole.goal.type, 1), shift(equalityType.left, 1));
+    // Rewrite should see through definitional computation.  Addition recurses
+    // on its first argument, so a target such as `Succ n + Succ 0` is stored
+    // as a recursor but normalizes to `Succ (n + Succ 0)`.  Matching the raw
+    // target misses the IH occurrence in that normalized subterm.
+    const target = normalize(hole.goal.type);
+    const abstraction = abstractEqualityTarget(shift(target, 1), shift(equalityType.left, 1));
     if (!abstraction.found) throw new TacticError(`rewrite found no match for ${show(equalityType.left)} in ${show(hole.goal.type)}`);
 
     const motive = lambda(equalityType.type, abstraction.term);
@@ -243,11 +248,20 @@ export class TacticSession {
     // motive for `add_succ`.
     const targetIndex = hole.goal.context.length - 1 - index;
     const motive = lambda(Nat, abstractInductionVariable(hole.goal.type, targetIndex), variableName);
-    const baseType = normalize(app(motive, Zero));
-    const successorTarget = normalize(app(motive, succ(variable(1, variableName))));
     const baseContext = hole.goal.context.slice(0, -1);
+
+    // `motive` is closed over the base context. When it is instantiated in
+    // the successor context, shift it over the two binders introduced by the
+    // induction case (`x` and `IH`). Otherwise beta-reduction captures the
+    // outer variable `n` in the `IH` slot.
+    const baseType = normalize(app(motive, Zero));
+    const successorTarget = normalize(app(shift(motive, 2), succ(variable(1, variableName))));
     const baseGoal = goal(baseContext, baseType, 'base');
-    const inductionHypothesis = normalize(app(motive, variable(0, variableName)));
+    // The IH type is stored in the context *before* the IH binder is
+    // introduced (`baseContext + x`), so it only crosses that one binder.
+    // The successor goal itself lives under both `x` and `IH`, hence the
+    // separate shift by two above.
+    const inductionHypothesis = normalize(app(shift(motive, 1), variable(0, variableName)));
     const successorContext: Context = [
       ...baseContext,
       { name: variableName, type: Nat },

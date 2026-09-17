@@ -106,6 +106,8 @@ export function renderBracketedExpression(source: string): string {
   };
 
   const lines = renderChildren(root, 0);
-  const hasMultilineGroup = root.some((child) => "open" in child && hasNestedGroup(child));
-  return lines.join("\n") + (hasMultilineGroup ? "\n" : "");
+  const rootGroups = root.filter((child): child is Group => "open" in child);
+  const hasMultilineGroup = rootGroups.some((group) => hasNestedGroup(group));
+  const needsTrailingNewline = hasMultilineGroup || rootGroups.length > 1;
+  return lines.join("\n") + (needsTrailingNewline ? "\n" : "");
 }

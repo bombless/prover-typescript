@@ -25,6 +25,7 @@ button { border: 0; }
 .tagline { margin-top: 3px; color: #697386; font-size: 13px; }
 .github-link { color: #273449; font-size: 14px; text-decoration: none; }
 .github-link:hover { text-decoration: underline; }
+.topbar-links { display: flex; align-items: center; gap: 16px; }
 
 .workspace {
   display: grid;
@@ -44,7 +45,6 @@ button { border: 0; }
   text-transform: uppercase;
 }
 .sidebar h2 { margin: 8px 0 18px; font-size: 17px; }
-.sidebar nav { display: grid; gap: 6px; }
 .theorem-item {
   display: grid;
   grid-template-columns: 28px 1fr;
@@ -71,16 +71,8 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .goal-card { padding-top: 18px; }
 .goal-expression { margin-top: 15px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 24px; }
 .proof-expression {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  padding: 2px 0 3px 1.5rem;
-  overflow-wrap: anywhere;
-  word-break: normal;
-  white-space: normal;
-  line-height: 1.65;
-  text-indent: -1.5rem;
+  display: block; width: 100%; min-width: 0; max-width: 100%; padding: 2px 0 3px 1.5rem;
+  overflow-wrap: anywhere; word-break: normal; white-space: normal; line-height: 1.65; text-indent: -1.5rem;
 }
 .proof-expression wbr { display: inline; }
 .context-row { min-width: 0; }
@@ -93,24 +85,11 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .bracket-color-3 { color: #3f6fa8; }
 .bracket-color-4 { color: #7a5aa6; }
 .bracket-color-5 { color: #b04f8a; }
-.context-row .proof-expression {
-  margin: 0;
-  padding: 0;
-  text-indent: 0;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
+.context-row .proof-expression { margin: 0; padding: 0; text-indent: 0; line-height: 1.4; overflow-wrap: anywhere; }
 .context-row { display: flex; gap: 10px; margin-top: 13px; color: #778293; }
 .context-row code { color: #273449; }
-.tactic-history ol {
-  margin: 0;
-  padding-left: 1.5rem;
-}
-
-.tactic-history li {
-  margin: 0.35rem 0;
-}
-
+.tactic-history ol { margin: 0; padding-left: 1.5rem; }
+.tactic-history li { margin: 0.35rem 0; }
 .tactic-card { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
 .tactic-card .card-title { grid-column: 1 / -1; }
 .tactic-input { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #cfd6df; border-radius: 7px; outline: none; }
@@ -118,23 +97,10 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .tactic-feedback { grid-column: 1 / -1; margin-top: -4px; color: #b42318; font-size: 14px; }
 .tactic-input:focus { border-color: #8e9aab; box-shadow: 0 0 0 3px rgba(110, 124, 145, .12); }
 .apply-button { align-self: stretch; padding: 0 18px; border-radius: 7px; background: #273449; color: #fff; font-weight: 650; }
-.apply-button:disabled { opacity: .45; }
 .proof-state { display: flex; align-items: center; justify-content: space-between; padding: 20px 4px; }
 .muted { margin: 8px 0 0; color: #7a8494; font-size: 14px; }
 .goal-count { color: #697386; font-size: 13px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-
-@media (max-width: 720px) {
-  .topbar { padding: 0 18px; }
-  .workspace { grid-template-columns: 1fr; }
-  .sidebar { border-right: 0; border-bottom: 1px solid #dde2e8; padding: 22px 18px; }
-  .sidebar nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .proof-panel { padding: 30px 18px 48px; }
-  .theorem-header { gap: 16px; }
-  .proof-layout { grid-template-columns: 1fr; }
-  .tactic-panel { position: static; }
-}
-
 .state-message { margin-top: 8px; font-size: 14px; }
 .state-message.neutral { color: #697386; }
 .state-message.success { color: #356448; }
@@ -163,9 +129,68 @@ h1 { margin: 7px 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .tactic-other { margin-top: 22px; padding-top: 16px; border-top: 1px solid #e4e8ed; }
 .theorem-list { display: grid; gap: 6px; max-height: 320px; overflow-y: auto; }
 .theorem-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.theorem-item span { color: var(--muted); font-size: 0.78rem; }
-
 .tactic-other-item { display: block; width: 100%; padding: 7px 0; background: transparent; color: #667386; text-align: left; cursor: pointer; }
 .tactic-other-item:hover { color: #273449; }
+pre.proof-expression { white-space: pre-wrap; word-break: keep-all; }
 
-pre.proof-expression { white-space: pre-wrap; word-break:keep-all; }
+/* KV Cache Lab */
+.kv-shell { min-height: 100vh; background: #f4f6f8; }
+.kv-topbar { height: 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; background: #fff; border-bottom: 1px solid #e1e5ea; }
+.kv-back { color: #273449; font-size: 14px; text-decoration: none; }
+.kv-back:hover { text-decoration: underline; }
+.kv-main { width: min(1080px, calc(100% - 36px)); margin: 0 auto; padding: 44px 0 70px; }
+.kv-hero { margin-bottom: 24px; }
+.kv-hero h1 { font-size: clamp(30px, 5vw, 46px); max-width: 780px; }
+.kv-hero p { max-width: 760px; color: #5f6b7b; font-size: 16px; line-height: 1.65; }
+.kv-signatures { display: grid; gap: 9px; margin-top: 14px; }
+.kv-formula { display: inline-block; padding: 5px 8px; border-radius: 6px; background: #f3f5f7; color: #273449; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+.kv-controls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 20px; align-items: center; margin-top: 20px; }
+.kv-controls label { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; color: #526074; font-size: 13px; }
+.kv-controls input[type="range"] { width: 100%; }
+.kv-controls output { min-width: 22px; font-weight: 700; text-align: right; }
+.kv-check { white-space: nowrap; }
+.kv-check input { margin: 0; }
+.kv-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.kv-path { min-height: 280px; }
+.kv-cached-path { border-color: #cbd9cf; }
+.kv-node { margin-top: 17px; padding: 13px; border: 1px solid #e1e5ea; border-radius: 8px; background: #fbfcfd; text-align: center; }
+.kv-arrow { padding: 8px; color: #7b8797; text-align: center; font-size: 18px; }
+.kv-deps { margin-top: 16px; }
+.kv-dep-row { display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid #edf0f3; }
+.kv-dep-row:last-child { border-bottom: 0; }
+.kv-dep-row strong { color: #4f7d61; font-size: 12px; text-transform: uppercase; }
+.kv-steps { margin-top: 30px; }
+.kv-step { display: grid; grid-template-columns: 42px 1fr; gap: 14px; margin-top: 10px; padding: 18px; border: 1px solid #dfe4ea; border-radius: 10px; background: #fff; }
+.kv-step.done { border-color: #cbd9cf; background: #f9fbf9; }
+.kv-step-number { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #eef1f4; color: #526074; font-weight: 750; }
+.kv-step.done .kv-step-number { background: #dce9df; color: #356448; }
+.kv-step h3 { margin: 0; font-size: 16px; }
+.kv-step p { margin: 7px 0 12px; color: #657184; line-height: 1.5; }
+.kv-prove-button { padding: 8px 12px; border: 1px solid #cfd6df; border-radius: 7px; background: #fff; color: #273449; font-weight: 650; cursor: pointer; }
+.kv-prove-button:hover { background: #f5f7f9; }
+.kv-proof-result { margin-top: 12px; padding: 10px 12px; border-left: 3px solid #7a9a83; background: #f1f6f2; color: #526458; font-size: 13px; line-height: 1.5; }
+.kv-cost { margin-top: 28px; }
+.kv-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+.kv-metrics div { padding: 16px; border: 1px solid #e1e5ea; border-radius: 8px; }
+.kv-metrics span, .kv-metrics small { display: block; color: #718094; font-size: 12px; }
+.kv-metrics strong { display: block; margin: 5px 0; font-size: 28px; }
+.kv-note { color: #7a8494; font-size: 12px; line-height: 1.5; }
+.kv-conclusion { display: grid; gap: 5px; margin-top: 16px; padding: 18px; border: 1px solid #dfe4ea; border-radius: 10px; background: #fff; }
+.kv-conclusion.complete { border-color: #cbd9cf; background: #f5f9f6; }
+.kv-conclusion strong { color: #273449; }
+.kv-conclusion span { color: #697386; font-size: 13px; }
+
+@media (max-width: 720px) {
+  .topbar, .kv-topbar { padding: 0 18px; }
+  .workspace { grid-template-columns: 1fr; }
+  .sidebar { border-right: 0; border-bottom: 1px solid #dde2e8; padding: 22px 18px; }
+  .proof-panel { padding: 30px 18px 48px; }
+  .theorem-header { gap: 16px; }
+  .proof-layout { grid-template-columns: 1fr; }
+  .tactic-panel { position: static; }
+  .kv-main { width: min(100% - 24px, 1080px); padding-top: 30px; }
+  .kv-controls, .kv-comparison, .kv-metrics { grid-template-columns: 1fr; }
+  .kv-check { justify-self: start; }
+  .kv-dep-row { grid-template-columns: 1fr; gap: 4px; }
+  .kv-dep-row > span:nth-child(2) { display: none; }
+}

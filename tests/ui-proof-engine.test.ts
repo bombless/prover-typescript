@@ -109,6 +109,15 @@ test("display projection keeps Chapter 2 binder out of context until intro", () 
   });
 });
 
+test("display projection groups consecutive Pi binders with the same domain", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("add_succ");
+  assert.deepEqual(engine.displayProofState(), {
+    props: [],
+    goal: "(n, x2 : Nat) → n + Succ x2 = Succ (n + x2)",
+  });
+});
+
 test("display projection renders the induction hypothesis using surface notation", () => {
   const engine = new RealProofEngine();
   engine.loadTheorem("add_zero");

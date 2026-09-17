@@ -118,8 +118,28 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
     }
     case "Var": return term.name ?? boundNames[term.index] ?? `v${term.index}`;
     case "Pi": {
-      const name = term.name ?? `x${boundNames.length + 1}`;
-      return `(${name} : ${formatDisplayTerm(term.domain, boundNames)}) → ${formatDisplayTerm(term.body, [name, ...boundNames])}`;
+      const names: string[] = [];
+      let current: CoreTerm = term;
+      let bodyNames = [...boundNames];
+      const domainText = formatDisplayTerm(term.domain, boundNames);
+
+      // Group consecutive non-dependent binders with the same domain so the
+      // goal uses the surface syntax `n, x2 : Nat -> ...` instead of exposing
+      // the Core representation as a chain of Pi binders.
+      while (current.kind === "Pi") {
+        const currentDomain = formatDisplayTerm(current.domain, bodyNames);
+        if (names.length > 0 && currentDomain !== domainText) break;
+        const name = current.name ?? `x${boundNames.length + names.length + 1}`;
+        names.push(name);
+        bodyNames = [name, ...bodyNames];
+        if (current.body.kind !== "Pi") {
+          return `(${names.join(", ")} : ${domainText}) → ${formatDisplayTerm(current.body, bodyNames)}`;
+        }
+        current = current.body;
+      }
+
+      const name = names[0];
+      return `(${name} : ${domainText}) → ${formatDisplayTerm(term.body, [name, ...boundNames])}`;
     }
     case "Eq": return `${formatDisplayTerm(term.left, boundNames)} = ${formatDisplayTerm(term.right, boundNames)}`;
     case "App": {

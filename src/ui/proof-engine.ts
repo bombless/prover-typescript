@@ -116,7 +116,7 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
       const rendered = formatDisplayTerm(term.value, boundNames);
       return term.value.kind === "App" || term.value.kind === "Succ" ? `Succ (${rendered})` : `Succ ${rendered}`;
     }
-    case "Var": return term.name ?? boundNames[term.index] ?? `#${term.index}`;
+    case "Var": return term.name ?? boundNames[term.index] ?? `v${term.index}`;
     case "Pi": {
       const name = term.name ?? `x${boundNames.length + 1}`;
       return `(${name} : ${formatDisplayTerm(term.domain, boundNames)}) → ${formatDisplayTerm(term.body, [name, ...boundNames])}`;
@@ -134,7 +134,14 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
       if (isAddRecursor(term)) {
         return `${formatDisplayTerm(term.scrutinee, boundNames)} + ${formatDisplayTerm(term.zeroCase, boundNames)}`;
       }
-      return show(term);
+      // Nat.rec introduces one binder in its motive and two binders (n, ih)
+      // in its successor case; keep those names in the UI instead of showing
+      // de Bruijn indices such as #0 and #1.
+      return `(Nat.rec ${formatDisplayTerm(term.motive, boundNames)} ${formatDisplayTerm(term.zeroCase, boundNames)} ${formatDisplayTerm(term.succCase, ["ih", "n", ...boundNames])} ${formatDisplayTerm(term.scrutinee, boundNames)})`;
+    }
+    case "Refl": return `refl ${formatDisplayTerm(term.value, boundNames)}`;
+    case "EqRec": {
+      return `(Eq.rec ${formatDisplayTerm(term.motive, boundNames)} ${formatDisplayTerm(term.reflCase, boundNames)} ${formatDisplayTerm(term.left, boundNames)} ${formatDisplayTerm(term.right, boundNames)} ${formatDisplayTerm(term.equality, boundNames)})`;
     }
     default: return show(term);
   }

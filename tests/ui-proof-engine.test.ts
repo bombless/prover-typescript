@@ -80,6 +80,30 @@ test("real engine rejects an invalid tactic and preserves the proof state", () =
   assert.deepEqual(result.state, before);
 });
 
+test("real engine rolls back a final tactic when proof extraction is rejected", () => {
+  const engine = new RealProofEngine();
+  let before = engine.loadTheorem("equality_rewrite");
+  // Induction with remaining outer locals can construct solvable branch
+  // goals whose compiled term is rejected at the final Kernel boundary.
+  for (const tactic of ["intro", "intro", "intro", "induction b", "intro", "rfl", "intro"]) {
+    const result = engine.runTactic(tactic);
+    assert.equal(result.kind, "success", result.message);
+    before = result.state;
+  }
+  const history = engine.tacticHistory();
+  const display = engine.displayProofState();
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const rejected = engine.runTactic("rfl");
+    assert.equal(rejected.kind, "error");
+    assert.match(rejected.message!, /Expected a function type, found Nat/);
+    assert.deepEqual(rejected.state, before);
+    assert.equal(rejected.state.completed, false);
+    assert.deepEqual(engine.tacticHistory(), history);
+    assert.deepEqual(engine.displayProofState(), display);
+  }
+});
+
 test("real engine exposes dynamic tactic suggestions from the Core goal", () => {
   const engine = new RealProofEngine();
   engine.loadTheorem("identity");

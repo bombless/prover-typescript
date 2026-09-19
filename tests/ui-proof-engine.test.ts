@@ -168,6 +168,31 @@ test("real engine supports assumption", () => {
   assert.equal(result.message, "Proof accepted");
 });
 
+for (const closingTactic of ["assumption", "exact h"]) {
+  test(`equality transport preserves its hypothesis binders and closes with ${closingTactic}`, () => {
+    const engine = new RealProofEngine();
+    const initial = engine.loadTheorem("equality_transport");
+    assert.equal(initial.theoremName, "equality_transport");
+    for (let i = 0; i < 3; i++) {
+      const result = engine.runTactic("intro");
+      assert.equal(result.kind, "success", result.kind === "error" ? result.message : "");
+    }
+    assert.deepEqual(engine.displayProofState(), {
+      props: [
+        { name: "a", type: "Nat" },
+        { name: "b", type: "Nat" },
+        { name: "h", type: "a = b" },
+      ],
+      goal: "a = b",
+    });
+    const result = engine.runTactic(closingTactic);
+    assert.equal(result.kind, "success", result.kind === "error" ? result.message : "");
+    assert.equal(result.message, "Proof accepted");
+    assert.equal(result.state.completed, true);
+    assert.deepEqual(result.state.goals, []);
+  });
+}
+
 test("real engine supports apply followed by exact", () => {
   const engine = new RealProofEngine();
   engine.loadTheorem("apply");

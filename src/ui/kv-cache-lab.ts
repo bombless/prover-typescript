@@ -4,8 +4,16 @@ type LabState = { prefixLength: number; layers: number; completed: Set<number>; 
 const escapeHtml = (text: string): string => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
 const formula = (text: string, cls = ""): string => `<code class="kv-formula ${cls}">${escapeHtml(text)}</code>`;
 
-export function renderKVCacheLab(root: HTMLDivElement): void {
+export function renderKVCacheLab(root: HTMLDivElement): () => void {
   const state: LabState = { prefixLength: 4, layers: 2, completed: new Set(), showDeps: true, playing: false, visibleStep: 0 };
+  let playbackTimer: number | undefined;
+  function stopPlayback(): void {
+    if (playbackTimer !== undefined) {
+      window.clearInterval(playbackTimer);
+      playbackTimer = undefined;
+    }
+    state.playing = false;
+  }
   const steps = [
     { title: "Define the model interface", text: "Make the cache an explicit value so the proof can track exactly what crosses the encode/forward boundary.", props: () => ["tokens : Token[]", "encode : Token[] → Cache", "forward : Token × Cache → Logits × Cache", "sample : Logits → Token"], proof: () => true, proofText: () => "The interface is compositional: encode creates the cache, forward extends it, and sample only consumes logits." },
     { title: "Encode the prefix once", text: "Each transformer layer stores the key/value tensors for the already-processed prefix.", props: () => [`n = ${state.prefixLength}`, `L = ${state.layers}`, "K_old : L × n × d_k", "V_old : L × n × d_v"], proof: () => true, proofText: () => `For n=${state.prefixLength}, the cache contains K[0..${state.prefixLength - 1}] and V[0..${state.prefixLength - 1}] at each of ${state.layers} layer${state.layers === 1 ? "" : "s"}.` },
@@ -25,9 +33,10 @@ export function renderKVCacheLab(root: HTMLDivElement): void {
     root.querySelector<HTMLInputElement>("#kv-length")?.addEventListener("input", (event) => { state.prefixLength = Number((event.target as HTMLInputElement).value); state.visibleStep = 0; render(); });
     root.querySelector<HTMLInputElement>("#kv-layers")?.addEventListener("input", (event) => { state.layers = Number((event.target as HTMLInputElement).value); render(); });
     root.querySelector<HTMLInputElement>("#kv-deps")?.addEventListener("change", (event) => { state.showDeps = (event.target as HTMLInputElement).checked; render(); });
-    root.querySelector<HTMLButtonElement>("#kv-reset")?.addEventListener("click", () => { state.completed.clear(); state.visibleStep = 0; state.playing = false; render(); });
-    root.querySelector<HTMLButtonElement>("#kv-play")?.addEventListener("click", () => { if (state.playing) return; state.playing = true; state.visibleStep = 0; state.completed.clear(); render(); let index = 0; const timer = window.setInterval(() => { state.visibleStep = index; state.completed.add(index); render(); index += 1; if (index >= steps.length) { window.clearInterval(timer); state.playing = false; state.visibleStep = steps.length - 1; render(); } }, 900); });
+    root.querySelector<HTMLButtonElement>("#kv-reset")?.addEventListener("click", () => { stopPlayback(); state.completed.clear(); state.visibleStep = 0; render(); });
+    root.querySelector<HTMLButtonElement>("#kv-play")?.addEventListener("click", () => { if (state.playing) return; state.playing = true; state.visibleStep = 0; state.completed.clear(); render(); let index = 0; playbackTimer = window.setInterval(() => { state.visibleStep = index; state.completed.add(index); render(); index += 1; if (index >= steps.length) { stopPlayback(); state.visibleStep = steps.length - 1; render(); } }, 900); });
     root.querySelectorAll<HTMLButtonElement>("[data-prove]").forEach((button) => button.addEventListener("click", () => { const index = Number(button.dataset.prove); if (steps[index].proof()) { state.completed.add(index); state.visibleStep = Math.min(steps.length - 1, Math.max(state.visibleStep, index + 1)); } render(); }));
   }
   render();
+  return stopPlayback;
 }

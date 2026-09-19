@@ -12,8 +12,8 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
 }
 
-function renderKVRoute(): void {
-  renderKVCacheLab(root);
+function renderKVRoute(): () => void {
+  return renderKVCacheLab(root);
 }
 
 function renderProofCourse(): void {
@@ -127,8 +127,12 @@ function renderProofCourse(): void {
   render();
 }
 
+let disposeRoute: (() => void) | undefined;
+
 function renderRoute(): void {
-  if (location.hash === "#kv-cache") renderKVRoute();
+  disposeRoute?.();
+  disposeRoute = undefined;
+  if (location.hash === "#kv-cache") disposeRoute = renderKVRoute();
   else renderProofCourse();
 }
 

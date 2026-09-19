@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Nat, Zero, Type, variable, lambda, pi, app, succ, natRec, eq, refl, natLiteral } from '../../src/syntax/ast';
-import { definitionalEqual, normalize } from '../../src/kernel/reduction';
+import { definitionalEqual, normalize, shift } from '../../src/kernel/reduction';
 import { check, infer, TypeError } from '../../src/kernel/typecheck';
 
 const natMotive = lambda(Nat, Nat, 'n');
@@ -84,4 +84,63 @@ test('Nat.rec itself has the expected dependent result type', () => {
 
   assert.ok(definitionalEqual(infer(ctx, term), Nat));
   assert.ok(definitionalEqual(infer([], motive), pi(Nat, Type)));
+});
+
+test('Nat.rec preserves an outer local in both successor motive positions', () => {
+  // In the motive, #0 is the recursion argument and #1 is outer m.
+  const motive = lambda(Nat, eq(Nat, variable(1, 'm'), variable(1, 'm')), 'n');
+  const zeroCase = refl(Nat, variable(0, 'm'));
+  const succCase = lambda(
+    Nat,
+    lambda(
+      app(shift(motive, 1), variable(0, 'n')),
+      // Under n and ih, outer m has crossed two binders and is #2.
+      refl(Nat, variable(2, 'm')),
+      'ih'
+    ),
+    'n'
+  );
+  const term = rec(motive, zeroCase, succCase, succ(Zero));
+  const expected = eq(Nat, variable(0, 'm'), variable(0, 'm'));
+
+  check([Nat], term, expected);
+  assert.ok(definitionalEqual(infer([Nat], term), expected));
+  assert.ok(definitionalEqual(normalize(term), zeroCase));
+  check([Nat], normalize(term), expected);
+});
+
+test('Nat.rec rejects a successor proof that captures the predecessor as an outer local', () => {
+  const motive = lambda(Nat, eq(Nat, variable(1, 'm'), variable(1, 'm')), 'n');
+  const capturedSuccCase = lambda(
+    Nat,
+    lambda(
+      app(shift(motive, 1), variable(0, 'n')),
+      // This proves n = n, not the required m = m: #1 is n, not m.
+      refl(Nat, variable(1, 'n')),
+      'ih'
+    ),
+    'n'
+  );
+  const term = rec(motive, refl(Nat, variable(0, 'm')), capturedSuccCase, succ(Zero));
+
+  assert.throws(() => infer([Nat], term), (error: unknown) => error instanceof TypeError && /Type mismatch/.test(error.message));
+});
+
+test('Nat.rec preserves outer locals when the motive also depends on the scrutinee', () => {
+  // P(n) = (n + m = n + m), where addition is another ordinary Nat.rec.
+  const sum = rec(natMotive, variable(1, 'm'), natStep, variable(0, 'n'));
+  const motive = lambda(Nat, eq(Nat, sum, sum), 'n');
+  const succValue = rec(natMotive, variable(2, 'm'), natStep, succ(variable(1, 'n')));
+  const succCase = lambda(
+    Nat,
+    lambda(app(shift(motive, 1), variable(0, 'n')), refl(Nat, succValue), 'ih'),
+    'n'
+  );
+  const term = rec(motive, refl(Nat, variable(0, 'm')), succCase, natLiteral(2));
+  const expectedValue = succ(succ(variable(0, 'm')));
+  const expected = eq(Nat, expectedValue, expectedValue);
+
+  check([Nat], term, expected);
+  assert.ok(definitionalEqual(infer([Nat], term), expected));
+  check([Nat], normalize(term), expected);
 });

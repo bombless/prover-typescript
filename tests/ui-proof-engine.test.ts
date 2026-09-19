@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MockProofEngine, RealProofEngine, type ProofEngine } from "../src/ui/proof-engine";
+import { AVAILABLE_THEOREM_LIST, MockProofEngine, REAL_THEOREM_LIST, RealProofEngine, type ProofEngine } from "../src/ui/proof-engine";
 
 test("UI proof view loads an initial theorem without exposing engine internals", () => {
   const engine = new MockProofEngine();
@@ -69,6 +69,36 @@ test("real engine accepts a proof through the kernel", () => {
   assert.equal(result.kind, "success");
   assert.equal(result.message, "Proof accepted");
   assert.equal(result.state.completed, true);
+});
+
+test("every theorem palette entry supplies a Kernel-accepted proof of its theorem", () => {
+  assert.ok(AVAILABLE_THEOREM_LIST.length > 0);
+  for (const theorem of AVAILABLE_THEOREM_LIST) {
+    const engine = new RealProofEngine();
+    assert.equal(engine.loadTheorem(theorem.id).theoremName, theorem.id);
+    const result = engine.runTactic(`exact ${theorem.id}`);
+    assert.equal(result.kind, "success", `${theorem.id}: ${result.message}`);
+    assert.equal(result.state.completed, true);
+    assert.equal(result.message, "Proof accepted");
+  }
+});
+
+test("theorem palette commands resolve across selectable goals and preserve mismatched goals", () => {
+  for (const goal of REAL_THEOREM_LIST) {
+    for (const theorem of AVAILABLE_THEOREM_LIST) {
+      const engine = new RealProofEngine();
+      const before = engine.loadTheorem(goal.id);
+      assert.equal(before.theoremName, goal.id);
+      const result = engine.runTactic(`exact ${theorem.id}`);
+      if (result.kind === "error") {
+        assert.doesNotMatch(result.message, /Unknown variable/, `${theorem.id} on ${goal.id}: ${result.message}`);
+        assert.deepEqual(result.state, before);
+        assert.deepEqual(engine.tacticHistory(), []);
+      } else {
+        assert.equal(result.state.completed, true);
+      }
+    }
+  }
 });
 
 test("real engine rejects an invalid tactic and preserves the proof state", () => {

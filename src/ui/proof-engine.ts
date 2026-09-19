@@ -326,11 +326,16 @@ export const MOCK_THEOREM_LIST = [
 ];
 export const MOCK_MULTI_GOAL_ID = "multi_goal";
 
+// These are selectable proof goals; loading one does not register a proof alias.
 export const REAL_THEOREM_LIST = Object.values(REAL_THEOREMS).map((theorem, index) => ({
   id: theorem.name,
   label: `${String(index + 1).padStart(2, "0")}  ${theorem.name}`,
 }));
 
+// Only aliases supported by `exact` belong in the theorem palette.
+export const AVAILABLE_THEOREM_LIST = [
+  { id: "add_succ", label: "add_succ" },
+] as const;
 
 
 

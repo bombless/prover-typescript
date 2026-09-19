@@ -1,4 +1,5 @@
 import { elaborate } from "../elaborator/elaborate";
+import { GlobalEnvironment } from "../environment/environment";
 import { parse } from "../parser/parser";
 import { proofState, type ProofState } from "../proof/state";
 import { tacticSession, TacticError, type TacticSession } from "../proof/tactic";
@@ -225,8 +226,13 @@ function toView(theoremName: string, state: ProofState): ProofStateView {
   };
 }
 
+// Resolve tutorial theorem aliases as ordinary terms, including inside
+// parentheses and applications. Elaboration gives local bindings precedence.
+const theoremEnvironment = new GlobalEnvironment();
+theoremEnvironment.define("add_succ", addSuccProof);
+
 function parseArgument(source: string, context: readonly { name: string }[]): CoreTerm {
-  return elaborate(parse(source), context.map((entry) => entry.name));
+  return elaborate(parse(source), context.map((entry) => entry.name), theoremEnvironment);
 }
 
 export class RealProofEngine implements ProofEngine {
@@ -278,10 +284,7 @@ export class RealProofEngine implements ProofEngine {
           if (!argument) throw new TacticError("exact expects a term");
           const goal = this.session.currentGoal();
           if (!goal) throw new TacticError("No goals remain");
-          // Tutorial theorem aliases are resolved at the UI adapter boundary;
-          // the resulting Core term still crosses the normal Kernel check.
-          const term = argument === "add_succ" ? addSuccProof : parseArgument(argument, goal.context);
-          this.session = this.session.exact(term);
+          this.session = this.session.exact(parseArgument(argument, goal.context));
           break;
         }
         case "apply": {

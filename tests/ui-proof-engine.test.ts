@@ -180,6 +180,69 @@ test("real engine supports apply followed by exact", () => {
   assert.equal(result.message, "Proof accepted");
 });
 
+test("real engine resolves the existing theorem alias in exact terms", () => {
+  for (const tactic of ["exact add_succ", "exact (add_succ)"]) {
+    const engine = new RealProofEngine();
+    engine.loadTheorem("add_succ");
+    const result = engine.runTactic(tactic);
+    assert.equal(result.kind, "success", result.message);
+    assert.equal(result.message, "Proof accepted");
+    assert.equal(result.state.completed, true);
+    assert.deepEqual(engine.tacticHistory(), [tactic]);
+  }
+});
+
+test("real engine applies the theorem alias to introduced variables", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("add_succ");
+  assert.equal(engine.runTactic("intro").kind, "success");
+  assert.equal(engine.runTactic("intro").kind, "success");
+  const result = engine.runTactic("exact add_succ n x");
+  assert.equal(result.kind, "success", result.message);
+  assert.equal(result.message, "Proof accepted");
+  assert.equal(result.state.completed, true);
+});
+
+test("real engine resolves theorem aliases within apply terms", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("add_succ");
+  assert.equal(engine.runTactic("intro").kind, "success");
+  assert.equal(engine.runTactic("intro").kind, "success");
+  const applied = engine.runTactic("apply (h : Eq Nat 0 0) => add_succ n x");
+  assert.equal(applied.kind, "success", applied.message);
+  assert.equal(applied.state.goals.length, 1);
+  assert.equal(applied.state.goals[0].target, "0 = 0");
+  const result = engine.runTactic("rfl");
+  assert.equal(result.kind, "success", result.message);
+  assert.equal(result.message, "Proof accepted");
+  assert.equal(result.state.completed, true);
+});
+
+test("theorem aliases still reject a mismatched goal without changing state or history", () => {
+  const engine = new RealProofEngine();
+  const before = engine.loadTheorem("zero");
+  const result = engine.runTactic("exact (add_succ)");
+  assert.equal(result.kind, "error");
+  assert.match(result.message!, /Type mismatch/);
+  assert.deepEqual(result.state, before);
+  assert.deepEqual(engine.tacticHistory(), []);
+  assert.equal(engine.runTactic("rfl").message, "Proof accepted");
+});
+
+test("local hypotheses take precedence over theorem aliases", () => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem("zero");
+  const applied = engine.runTactic("apply (f : (add_succ : Eq Nat 0 0) -> Eq Nat 0 0) => Refl Nat 0");
+  assert.equal(applied.kind, "success", applied.message);
+  const introduced = engine.runTactic("intro");
+  assert.equal(introduced.kind, "success", introduced.message);
+  assert.deepEqual(introduced.state.goals[0].context, [{ name: "add_succ", type: "0 = 0" }]);
+  const result = engine.runTactic("exact add_succ");
+  assert.equal(result.kind, "success", result.message);
+  assert.equal(result.message, "Proof accepted");
+  assert.equal(result.state.completed, true);
+});
+
 test("real engine does not expose proof internals through its UI state", () => {
   const engine = new RealProofEngine();
   const state = engine.loadTheorem("identity");

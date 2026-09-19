@@ -499,17 +499,19 @@ Exercise 4 and exercise 8 intentionally share the `add_zero` Core theorem builde
 
 The real UI dispatch supports `intro`, `rfl`, `assumption`, `exact`, `apply`, `rewrite <hypothesis>`, and bounded `induction <name>`. Induction exposes base/successor goals and a real IH context; rewrite constructs an `EqRec` proof through the existing proof engine.
 
-### Current bounded capability gaps
+### Current bounded capabilities
 
-- Exercise 5 (`addition.add_succ`) remains a registered real goal but is unavailable in the tutorial UI because the current bounded induction compiler does not yet preserve de Bruijn scope correctly when an outer local remains during the induction proof. It is recorded as a capability gap rather than completed through a UI special case.
-- Exercise 7 (`equality.rewrite`) is likewise registered but unavailable until its tutorial theorem/context shape is aligned with the existing Kernel-checked M21 rewrite proof path. The underlying rewrite tactic remains tested independently, including success, failure, and rollback.
+All ten exercises are available. The tutorial regression follows each displayed **Suggested path** through `RealProofEngine` and requires Kernel-accepted completion.
+
+- Exercise 5 (`addition.add_succ`) completes with `exact add_succ`. The UI adapter resolves that alias to the existing Core proof, which passes the normal Kernel check. This supported path does not resolve the bounded induction compiler's scope limitation when retaining outer locals.
+- Exercise 7 (`equality.rewrite`) completes with `intro; intro; intro; intro; rewrite h; rfl`. The rewrite changes `f a = f a` to `f b = f b` using `h : a = b`, and the resulting `EqRec` proof passes the Kernel check.
 
 The project deliberately does not add proof search, general induction, simp/rewrite search, ring/arith automation, new inductive types, pattern matching, modules/imports, LSP, or full dependent elaboration.
 
 ### Verification
 
 ```text
-npm test          -> 183 tests / 183 passed / 0 failed
+npm test          -> 205 tests / 205 passed / 0 failed
 npm run build:web -> success
 git diff --check  -> success
 ```

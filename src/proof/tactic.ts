@@ -1,6 +1,6 @@
 import { check, infer, show } from '../kernel/typecheck';
 import { definitionalEqual, normalize, shift, whnf } from '../kernel/reduction';
-import { Term, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
+import { Term, Type, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
 import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
@@ -92,12 +92,15 @@ function compile(root: ProofNode, depth = 0): Term {
     case 'app': return app(compile(root.fn, depth), compile(root.arg, depth));
     case 'eqRec': return eqRec(root.motive, compile(root.reflCase, depth), root.left, root.right, root.equality);
     case 'natRec': {
+      // Case goals omit the original induction variable. Reinsert that binder
+      // when compiling back into the surrounding proof context.
+      const motive = shift(root.motive, 1);
       const successorCase = lambda(
         Nat,
-        lambda(app(shift(root.motive, 1), variable(0, 'n')), compile(root.succCase, depth + 2), 'IH'),
+        lambda(app(shift(motive, 1), variable(0, 'n')), shift(compile(root.succCase, depth + 2), 1, 2), 'IH'),
         'n',
       );
-      return natRec(root.motive, compile(root.zeroCase, depth), successorCase, root.scrutinee);
+      return natRec(motive, shift(compile(root.zeroCase, depth), 1), successorCase, root.scrutinee);
     }
   }
 }
@@ -122,9 +125,10 @@ export class TacticSession {
   private readonly root: ProofNode;
   private readonly holes: readonly Hole[];
   private readonly rootContext: Context;
+  private readonly rootType: Term;
 
-  private constructor(state: ProofState, root: ProofNode, holes: readonly Hole[], rootContext: Context) {
-    this.state = state; this.root = root; this.holes = holes; this.rootContext = rootContext;
+  private constructor(state: ProofState, root: ProofNode, holes: readonly Hole[], rootContext: Context, rootType: Term) {
+    this.state = state; this.root = root; this.holes = holes; this.rootContext = rootContext; this.rootType = rootType;
   }
 
   static fromState(input: ProofStateInput): TacticSession {
@@ -132,14 +136,14 @@ export class TacticSession {
     if (state.goals.length !== 1) throw new TacticError('A tactic session must start from one root goal');
     const rootGoal = state.goals[0];
     const hole = { id: rootGoal.id!, goal: rootGoal, depth: 0 };
-    return new TacticSession(state, { kind: 'hole', id: hole.id }, [hole], hole.goal.context);
+    return new TacticSession(state, { kind: 'hole', id: hole.id }, [hole], hole.goal.context, hole.goal.type);
   }
 
   currentGoal(): Goal | undefined { return this.state.goals.find(item => item.id === this.state.focusedGoalId); }
 
   focusGoal(id: GoalId): TacticSession {
     if (!this.holes.some(hole => hole.id === id)) throw new TacticError(`Goal id not found: ${id}`);
-    return new TacticSession(proofState(this.holes.map(hole => hole.goal), id), this.root, this.holes, this.rootContext);
+    return new TacticSession(proofState(this.holes.map(hole => hole.goal), id), this.root, this.holes, this.rootContext, this.rootType);
   }
 
   next(): TacticSession {
@@ -290,6 +294,52 @@ export class TacticSession {
     throw new TacticError(`assumption found no local hypothesis matching ${show(hole.goal.type)}`);
   }
 
+  /** Introduce a local lemma, with either a checked proof or a separate obligation. */
+  have(name: string, type: Term, proof?: Term): TacticSession {
+    const hole = this.firstHole();
+    if (!/^[A-Za-z_][A-Za-z0-9_']*$/.test(name) || ['Type', 'Nat', 'Succ', 'Eq', 'Refl'].includes(name)) {
+      throw new TacticError('have expects a non-reserved local identifier');
+    }
+    if (hole.goal.context.some((entry) => entry.name === name)) {
+      throw new TacticError(`Local name already exists: ${name}`);
+    }
+    // Validate in the old context: neither the declaration nor its proof may
+    // refer to the new binding. Allocate goals only after these checks succeed.
+    try {
+      const context = contextTypes(hole.goal.context);
+      check(context, type, Type);
+      if (proof !== undefined) check(context, proof, type);
+    } catch (error) {
+      throw new TacticError(error instanceof Error ? error.message : String(error));
+    }
+
+    const continuationGoal = goal(
+      [...hole.goal.context, { name, type }],
+      shift(hole.goal.type, 1),
+      hole.goal.caseName,
+    );
+    const continuation: Hole = { id: continuationGoal.id!, goal: continuationGoal, depth: hole.depth + 1 };
+    const replacements: Hole[] = [];
+    let argument: ProofNode;
+    if (proof === undefined) {
+      const lemmaGoal = goal(hole.goal.context, type, `have ${name}`);
+      const lemma: Hole = { id: lemmaGoal.id!, goal: lemmaGoal, depth: hole.depth };
+      replacements.push(lemma);
+      argument = { kind: 'hole', id: lemma.id };
+    } else {
+      argument = { kind: 'term', term: proof, depth: hole.depth };
+    }
+    replacements.push(continuation);
+    // The local declaration is ordinary function application in Core:
+    // ((name : type) => continuation) lemmaProof.
+    const root = replaceNode(this.root, hole.id, {
+      kind: 'app',
+      fn: { kind: 'lambda', domain: type, name, body: { kind: 'hole', id: continuation.id } },
+      arg: argument,
+    });
+    return this.withReplacement(hole.id, replacements, root);
+  }
+
   apply(term: Term): TacticSession {
     const hole = this.firstHole();
     let currentType: Term;
@@ -339,7 +389,9 @@ export class TacticSession {
   proof(): Term {
     if (this.holes.length !== 0) throw new TacticError(`Cannot extract proof: ${this.holes.length} goal(s) remain`);
     const result = compile(this.root);
-    infer(contextTypes(this.rootContext), result);
+    // A well-typed compiled term must also prove the original goal. Compiler
+    // scope mistakes can otherwise produce a valid proof of a different type.
+    check(contextTypes(this.rootContext), result, this.rootType);
     return result;
   }
 
@@ -354,7 +406,7 @@ export class TacticSession {
     if (index < 0) throw new TacticError(`Unknown goal #${id}`);
     const holes = [...this.holes.slice(0, index), ...replacements, ...this.holes.slice(index + 1)];
     const focus = replacements[0]?.id ?? holes[index]?.id ?? holes[index - 1]?.id ?? null;
-    return new TacticSession(proofState(holes.map((hole) => hole.goal), focus), root, holes, this.rootContext);
+    return new TacticSession(proofState(holes.map((hole) => hole.goal), focus), root, holes, this.rootContext, this.rootType);
   }
 }
 

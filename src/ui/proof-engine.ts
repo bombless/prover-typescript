@@ -260,6 +260,7 @@ export class RealProofEngine implements ProofEngine {
     if (this.session.state.goals.length === 0) return { kind: "error", message: "There are no goals left to solve.", state: currentView() };
     const [name, ...parts] = source.split(/\s+/);
     const argument = parts.join(" ");
+    const previousSession = this.session;
     try {
       switch (name.toLowerCase()) {
         case "intro":
@@ -305,14 +306,14 @@ export class RealProofEngine implements ProofEngine {
         default:
           throw new TacticError(`Unknown tactic: ${name}`);
       }
-      this.history.push(source);
       const state = toView(this.theoremName, this.session.state);
       if (state.completed) {
         this.session.proof();
-        return { kind: "success", message: "Proof accepted", state: cloneView(state) };
       }
-      return { kind: "success", message: "Proof state updated", state: cloneView(state) };
+      this.history.push(source);
+      return { kind: "success", message: state.completed ? "Proof accepted" : "Proof state updated", state: cloneView(state) };
     } catch (error) {
+      this.session = previousSession;
       return { kind: "error", message: error instanceof Error ? error.message : String(error), state: currentView() };
     }
   }

@@ -1,6 +1,6 @@
 import { Term } from '../syntax/ast';
-import { shift, definitionalEqual } from '../kernel/reduction';
-import { MetaContext, MetaRef, coreTerm, metaTerm } from './metavariable/meta';
+import { definitionalEqual } from '../kernel/reduction';
+import { MetaContext, MetaRef, coreTerm, metaTerm, rebaseCoreTerm } from './metavariable/meta';
 
 export type UnificationTerm = Term | MetaRef;
 
@@ -12,41 +12,49 @@ export class UnificationError extends Error {
   constructor(message: string) { super(message); this.name = 'UnificationError'; }
 }
 
-export function unify(left: UnificationTerm, right: UnificationTerm, context: MetaContext): MetaContext {
-  return unifyAtDepth(left, right, context, 0);
+/**
+ * Unify in a shared prefix context. The default root scope is the greatest
+ * metavariable occurrence scope; pass it explicitly when only Core terms
+ * reveal a larger ambient context. Syntactic binders extend that root scope.
+ */
+export function unify(left: UnificationTerm, right: UnificationTerm, context: MetaContext, scopeDepth?: number): MetaContext {
+  const rootScope = commonScope([left, right], context, scopeDepth);
+  return unifyAtDepth(left, right, context, rootScope, 0);
 }
 
-function unifyAtDepth(left: UnificationTerm, right: UnificationTerm, context: MetaContext, binderDepth: number): MetaContext {
-  const a = prune(left, context, binderDepth);
-  const b = prune(right, context, binderDepth);
+function unifyAtDepth(left: UnificationTerm, right: UnificationTerm, context: MetaContext, rootScope: number, binderDepth: number): MetaContext {
+  const a = prune(left, context, rootScope, binderDepth);
+  const b = prune(right, context, rootScope, binderDepth);
   const assign = (variable: MetaRef, value: UnificationTerm): MetaContext => {
-    // Inferring root-scope assignments from binder-local terms requires a
-    // binder-aware solver. Keep this unsupported case explicit and immutable.
+    // Binder-local inference is deliberately outside this first-order solver.
     if (binderDepth > 0) throw new UnificationError(`Cannot infer metavariable ?m${variable.id} under a binder`);
-    return assignFromTerm(variable, value, context);
+    return assignFromTerm(variable, value, context, rootScope);
   };
   if (a.kind === 'meta') {
-    if (b.kind === 'meta' && a.id === b.id) return context;
+    if (b.kind === 'meta') {
+      if (a.id === b.id) return context;
+      // The deeper variable can depend on the shallower one. Reversing the
+      // equation must not change which scope remains available for solutions.
+      if (context.lookup(a.id).scopeDepth < context.lookup(b.id).scopeDepth) return assign(b, a);
+    }
     return assign(a, b);
   }
   if (b.kind === 'meta') return assign(b, a);
-  return unifyCore(a, b, context, binderDepth);
+  return unifyCore(a, b, context, rootScope, binderDepth);
 }
 
-export function toCoreTerm(term: UnificationTerm, context: MetaContext): Term {
-  const resolved = prune(term, context);
-  if (resolved.kind === 'meta') throw new UnificationError(`Unassigned metavariable ?m${resolved.id}`);
-  return materializeCore(resolved, context);
+/** Materialize in the same shared prefix scope used for unification. */
+export function toCoreTerm(term: UnificationTerm, context: MetaContext, scopeDepth?: number): Term {
+  return materializeCore(term, context, commonScope([term], context, scopeDepth));
 }
 
-function materializeCore(term: Term, context: MetaContext, binderDepth = 0): Term {
-  const nested = (value: Term, depth = binderDepth): Term => {
-    const candidate = value as UnificationTerm;
-    // Assignments live in the metavariable's original local scope. Lift their
-    // free variables across binders surrounding this occurrence.
-    if (candidate.kind === 'meta') return shift(toCoreTerm(candidate, context), depth);
-    return materializeCore(candidate, context, depth);
-  };
+function materializeCore(term: UnificationTerm, context: MetaContext, rootScope: number, binderDepth = 0): Term {
+  if (term.kind === 'meta') {
+    const resolved = prune(term, context, rootScope, binderDepth);
+    if (resolved.kind === 'meta') throw new UnificationError(`Unassigned metavariable ?m${resolved.id}`);
+    return resolved;
+  }
+  const nested = (value: Term, depth = binderDepth): Term => materializeCore(value, context, rootScope, depth);
   switch (term.kind) {
     case 'Type': case 'Nat': case 'Zero': case 'Var': return term;
     case 'Pi': return { ...term, domain: nested(term.domain), body: nested(term.body, binderDepth + 1) };
@@ -58,6 +66,27 @@ function materializeCore(term: Term, context: MetaContext, binderDepth = 0): Ter
     case 'Refl': return { ...term, type: nested(term.type), value: nested(term.value) };
     case 'EqRec': return { ...term, motive: nested(term.motive), reflCase: nested(term.reflCase), left: nested(term.left), right: nested(term.right), equality: nested(term.equality) };
   }
+}
+
+function commonScope(terms: readonly UnificationTerm[], context: MetaContext, explicitScope?: number): number {
+  let required = 0;
+  const visit = (term: UnificationTerm): void => {
+    switch (term.kind) {
+      case 'meta': required = Math.max(required, context.referenceScope(term)); return;
+      case 'Type': case 'Nat': case 'Zero': case 'Var': return;
+      case 'Pi': case 'Lambda': visit(term.domain); visit(term.body); return;
+      case 'App': visit(term.fn); visit(term.arg); return;
+      case 'Succ': visit(term.value); return;
+      case 'NatRec': visit(term.motive); visit(term.zeroCase); visit(term.succCase); visit(term.scrutinee); return;
+      case 'Eq': visit(term.type); visit(term.left); visit(term.right); return;
+      case 'Refl': visit(term.type); visit(term.value); return;
+      case 'EqRec': visit(term.motive); visit(term.reflCase); visit(term.left); visit(term.right); visit(term.equality); return;
+    }
+  };
+  terms.forEach(visit);
+  const scope = explicitScope ?? required;
+  if (!Number.isSafeInteger(scope) || scope < required || scope < 0) throw new UnificationError(`Scope escape: ambient scope ${scope} cannot contain scope ${required}`);
+  return scope;
 }
 
 export function substituteUnification(body: UnificationTerm, replacement: UnificationTerm, depth = 0): UnificationTerm {
@@ -95,24 +124,26 @@ function shiftUnification(term: UnificationTerm, amount: number, cutoff = 0): Un
   }
 }
 
-function assignFromTerm(variable: MetaRef, value: UnificationTerm, context: MetaContext): MetaContext {
-  const resolved = prune(value, context);
-  if (resolved.kind === 'meta') return context.assign(variable.id, metaTerm(resolved.id));
-  if (occurs(variable.id, resolved, context)) throw new UnificationError(`Occurs check failed: ?m${variable.id} occurs in its assignment`);
-  // MetaContext stores only Core terms or direct aliases. Materialize nested
-  // metavariables so its scope validator sees every free Core variable.
-  return context.assign(variable.id, coreTerm(toCoreTerm(resolved, context)));
+function assignFromTerm(variable: MetaRef, value: UnificationTerm, context: MetaContext, rootScope: number): MetaContext {
+  if (value.kind === 'meta') return context.assign(variable.id, metaTerm(value.id));
+  if (occurs(variable.id, value, context)) throw new UnificationError(`Occurs check failed: ?m${variable.id} occurs in its assignment`);
+  // Resolve nested references before lowering. Otherwise a solved alias could
+  // hide a local variable that the receiving metavariable cannot mention.
+  const materialized = materializeCore(value, context, rootScope);
+  const lowered = rebaseCoreTerm(materialized, rootScope, context.lookup(variable.id).scopeDepth);
+  return context.assign(variable.id, coreTerm(lowered));
 }
 
-function prune(term: UnificationTerm, context: MetaContext, binderDepth = 0): UnificationTerm {
+function prune(term: UnificationTerm, context: MetaContext, rootScope: number, binderDepth = 0): UnificationTerm {
   if (term.kind !== 'meta') return term;
-  const resolved = context.resolve(term.id);
-  if (resolved.kind === 'meta') return resolved;
-  return binderDepth === 0 ? resolved.term : shiftUnification(resolved.term, binderDepth);
+  if (context.referenceScope(term) > rootScope) throw new UnificationError('Scope escape: metavariable occurrence exceeds the root scope');
+  const resolved = context.resolveAt(term.id, rootScope + binderDepth);
+  return resolved.kind === 'meta' ? resolved : resolved.term;
 }
 
 function occurs(id: number, term: UnificationTerm, context: MetaContext): boolean {
-  const resolved = prune(term, context);
+  const value = term.kind === 'meta' ? context.resolve(term.id) : coreTerm(term);
+  const resolved = value.kind === 'meta' ? value : value.term;
   if (resolved.kind === 'meta') return resolved.id === id;
   switch (resolved.kind) {
     case 'Type': case 'Nat': case 'Zero': case 'Var': return false;
@@ -141,10 +172,10 @@ function isCoreTerm(term: UnificationTerm): term is Term {
   }
 }
 
-function unifyCore(left: Term, right: Term, context: MetaContext, binderDepth: number): MetaContext {
+function unifyCore(left: Term, right: Term, context: MetaContext, rootScope: number, binderDepth: number): MetaContext {
   if (isCoreTerm(left) && isCoreTerm(right) && definitionalEqual(left, right)) return context;
   if (left.kind !== right.kind) throw new UnificationError(`Cannot unify ${left.kind} with ${right.kind}`);
-  const nested = (a: UnificationTerm, b: UnificationTerm, next: MetaContext): MetaContext => unifyAtDepth(a, b, next, binderDepth);
+  const nested = (a: UnificationTerm, b: UnificationTerm, next: MetaContext): MetaContext => unifyAtDepth(a, b, next, rootScope, binderDepth);
   switch (left.kind) {
     case 'Type': case 'Nat': case 'Zero': return context;
     case 'Var':
@@ -153,7 +184,7 @@ function unifyCore(left: Term, right: Term, context: MetaContext, binderDepth: n
     case 'Pi': case 'Lambda': {
       const r = right as typeof left;
       const next = nested(left.domain, r.domain, context);
-      return unifyAtDepth(left.body, r.body, next, binderDepth + 1);
+      return unifyAtDepth(left.body, r.body, next, rootScope, binderDepth + 1);
     }
     case 'App': {
       const r = right as typeof left;

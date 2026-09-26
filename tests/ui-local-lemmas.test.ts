@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { TacticSession } from '../src/proof/tactic';
 import { RealProofEngine } from '../src/ui/proof-engine';
 
 test('the real engine exposes have and proves a local equality in two stages', () => {
@@ -119,4 +120,23 @@ test('an immediate local value remains an opaque assumption while solving the co
   assert.deepEqual(invalid.state, declared.state);
   assert.deepEqual(engine.tacticHistory(), ['have n : Nat := 0']);
   assert.equal(engine.runTactic('rfl').message, 'Proof accepted');
+});
+
+
+test('failed extraction after a local lemma restores its continuation and history', (t) => {
+  const engine = new RealProofEngine();
+  engine.loadTheorem('identity');
+  assert.equal(engine.runTactic('intro').kind, 'success');
+  const before = engine.runTactic('have h : Eq Nat n n := Refl Nat n').state;
+  const history = engine.tacticHistory();
+  const proof = t.mock.method(TacticSession.prototype, 'proof', () => {
+    throw new Error('Injected final proof failure');
+  });
+  const rejected = engine.runTactic('exact h');
+  assert.equal(rejected.kind, 'error');
+  assert.deepEqual(rejected.state, before);
+  assert.equal(rejected.state.completed, false);
+  assert.deepEqual(engine.tacticHistory(), history);
+  proof.mock.restore();
+  assert.equal(engine.runTactic('exact h').message, 'Proof accepted');
 });

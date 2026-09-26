@@ -179,3 +179,144 @@ test("loading a theorem permits replaying the same successful source", () => {
     assert.deepEqual(engine.tacticHistory(), ["intro", "rfl"]);
   }
 });
+
+
+test("failed scripts create no undo steps before any manual tactic", () => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("identity");
+  const rejected = engine.runScript("intro\nexact Nat");
+  assert.equal(rejected.kind, "error");
+  assert.deepEqual(rejected.state, initial);
+  assert.equal(engine.canUndo(), false);
+  assert.equal(engine.undo().kind, "error");
+});
+
+test("failed scripts preserve earlier manual undo steps without retaining intermediate steps", () => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("assumption");
+  const before = engine.runTactic("intro").state;
+  const rejected = engine.runScript("intro\nexact Nat");
+  assert.equal(rejected.kind, "error");
+  assert.deepEqual(rejected.state, before);
+  assert.deepEqual(engine.tacticHistory(), ["intro"]);
+  assert.deepEqual(engine.undo().state, initial);
+  assert.equal(engine.canUndo(), false);
+});
+
+test("successful scripts keep individual undo steps and mix with manual tactics", () => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("assumption");
+  const first = engine.runTactic("intro").state;
+  assert.equal(engine.runScript("intro\nassumption").state.completed, true);
+  const reopened = engine.undo();
+  assert.equal(reopened.state.completed, false);
+  assert.equal(reopened.state.goals[0].context.length, 2);
+  assert.deepEqual(engine.tacticHistory(), ["intro", "intro"]);
+  assert.equal(engine.runTactic("assumption").state.completed, true);
+  assert.deepEqual(engine.undo().state, reopened.state);
+  assert.deepEqual(engine.undo().state, first);
+  assert.deepEqual(engine.undo().state, initial);
+  assert.equal(engine.canUndo(), false);
+});
+
+test("a failed batch after induction preserves the focus and all prior undo snapshots", () => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("add_zero");
+  const introduced = engine.runTactic("intro").state;
+  const cases = engine.runTactic("induction n").state;
+  const display = engine.displayProofState();
+  assert.equal(engine.runScript("rfl\nexact Nat").kind, "error");
+  assert.deepEqual(engine.displayProofState(), display);
+  assert.deepEqual(engine.runTactic("rfl").state.goals.map(goal => goal.id), [cases.goals[1].id]);
+  assert.deepEqual(engine.undo().state, cases);
+  assert.deepEqual(engine.undo().state, introduced);
+  assert.deepEqual(engine.undo().state, initial);
+  assert.equal(engine.canUndo(), false);
+});
+
+test("trailing commands after script completion leave prior undo history intact", () => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("identity");
+  const before = engine.runTactic("intro").state;
+  const rejected = engine.runScript("rfl\nrfl");
+  assert.equal(rejected.kind, "error");
+  assert.deepEqual(rejected.state, before);
+  assert.deepEqual(engine.undo().state, initial);
+  assert.equal(engine.canUndo(), false);
+});
+
+test("final Kernel failures restore undo history after successful script prefixes", (t) => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("assumption");
+  const before = engine.runTactic("intro").state;
+  const proof = t.mock.method(TacticSession.prototype, "proof", () => { throw new Error("Injected Kernel failure"); });
+  const rejected = engine.runScript("intro\nassumption");
+  assert.equal(rejected.kind, "error");
+  assert.deepEqual(rejected.state, before);
+  assert.deepEqual(engine.tacticHistory(), ["intro"]);
+  assert.deepEqual(engine.undo().state, initial);
+  assert.equal(engine.canUndo(), false);
+  proof.mock.restore();
+  assert.equal(engine.runScript("intro\nintro\nassumption").state.completed, true);
+});
+
+test("a proof of a different theorem rolls back every script undo step", (t) => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("identity");
+  t.mock.method(TacticSession.prototype, "proof", () => Nat);
+  const rejected = engine.runScript("intro\nrfl");
+  assert.equal(rejected.kind, "error");
+  assert.deepEqual(rejected.state, initial);
+  assert.deepEqual(engine.tacticHistory(), []);
+  assert.equal(engine.canUndo(), false);
+});
+
+test("preflight errors and theorem navigation preserve the documented undo boundaries", () => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("identity");
+  const introduced = engine.runTactic("intro").state;
+  for (const source of ["-- No commands", "rfl\n--" + "x".repeat(MAX_PROOF_SCRIPT_LENGTH)]) {
+    assert.deepEqual(engine.runScript(source).state, introduced);
+    assert.equal(engine.canUndo(), true);
+  }
+  assert.deepEqual(engine.undo().state, initial);
+  assert.equal(engine.canUndo(), false);
+  assert.equal(engine.runScript("intro\nrfl").state.completed, true);
+  engine.loadTheorem("zero");
+  assert.equal(engine.canUndo(), false);
+  assert.deepEqual(engine.tacticHistory(), []);
+});
+
+
+test("a final batch validation error removes undo steps already accepted by each tactic", (t) => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("assumption");
+  const before = engine.runTactic("intro").state;
+  const extract = TacticSession.prototype.proof;
+  let checks = 0;
+  t.mock.method(TacticSession.prototype, "proof", function (this: TacticSession) {
+    if (++checks === 2) throw new Error("Injected batch validation failure");
+    return extract.call(this);
+  });
+  const rejected = engine.runScript("intro\nassumption");
+  assert.equal(checks, 2);
+  assert.equal(rejected.kind, "error");
+  assert.match(rejected.message, /^Line 2: Injected batch validation failure/);
+  assert.deepEqual(rejected.state, before);
+  assert.deepEqual(engine.tacticHistory(), ["intro"]);
+  assert.deepEqual(engine.undo().state, initial);
+  assert.equal(engine.canUndo(), false);
+});
+
+test("a rejected script after Undo cannot resurrect discarded undo steps", () => {
+  const engine = new RealProofEngine();
+  const initial = engine.loadTheorem("assumption");
+  const first = engine.runTactic("intro").state;
+  engine.runTactic("intro");
+  assert.deepEqual(engine.undo().state, first);
+  assert.equal(engine.runScript("intro\nexact Nat").kind, "error");
+  assert.deepEqual(engine.tacticHistory(), ["intro"]);
+  assert.deepEqual(engine.undo().state, initial);
+  assert.equal(engine.canUndo(), false);
+  assert.equal(engine.undo().kind, "error");
+});

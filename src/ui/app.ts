@@ -108,6 +108,7 @@ function renderProofCourse(): void {
     root.querySelector<HTMLButtonElement>("#undo-button")?.addEventListener("click", () => {
       const wasCompleted = state?.completed === true;
       const result = engine.undo();
+      scriptError = "";
       state = result.state;
       statusKind = result.kind === "success" ? "neutral" : "error";
       statusMessage = result.message ?? "Last tactic undone";

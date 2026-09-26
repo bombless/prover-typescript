@@ -296,6 +296,7 @@ export class RealProofEngine implements ProofEngine {
   runScript(source: string): ProofScriptResult {
     const originalSession = this.session;
     const originalHistory = [...this.history];
+    const originalUndoStack = [...this.undoStack];
     let line: number | undefined;
     try {
       const commands = parseProofScript(source);
@@ -321,6 +322,7 @@ export class RealProofEngine implements ProofEngine {
     } catch (error) {
       this.session = originalSession;
       this.history = originalHistory;
+      this.undoStack = originalUndoStack;
       const failedLine = error instanceof ProofScriptError ? error.line : line;
       const message = error instanceof Error ? error.message : String(error);
       return {

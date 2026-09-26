@@ -137,3 +137,39 @@ test("script drafts survive manual tactics and clear when selecting another exer
   root.selectExercise("numbers.zero_eq_zero");
   assert.equal(root.control("proof-script").value, "");
 });
+
+
+test("Undo after a failed script clears stale diagnostics and preserves the draft", () => {
+  const root = loadApp();
+  root.selectExercise("numbers.identity");
+  root.control("tactic-input").value = "intro";
+  root.control("apply-button").emit("click");
+  const source = "rfl\nunknown_tactic";
+  enterScript(root, source);
+  assert.match(root.html, /Line 2: There are no goals left/);
+  root.control("undo-button").emit("click");
+  assert.equal(root.control("proof-script").value, source);
+  assert.equal(root.control("proof-script").attributes["aria-invalid"], "false");
+  assert.equal(root.html.includes('id="script-feedback"'), false);
+  assert.match(root.html, /No tactics applied yet/);
+  enterScript(root, "intro\nrfl");
+  assert.match(root.html, /Accepted by the real Kernel/);
+});
+
+test("Undo removes script completion only for the current exercise and permits manual retry", () => {
+  const root = loadApp();
+  const completed = (id: string) => root.controls.find(control => control.dataset.exercise === id)!.attributes.class.includes("completed");
+  root.selectExercise("numbers.zero_eq_zero");
+  enterScript(root, "rfl");
+  root.selectExercise("numbers.identity");
+  enterScript(root, "intro\nrfl");
+  assert.equal(completed("numbers.zero_eq_zero"), true);
+  assert.equal(completed("numbers.identity"), true);
+  root.control("undo-button").emit("click");
+  assert.equal(completed("numbers.zero_eq_zero"), true);
+  assert.equal(completed("numbers.identity"), false);
+  assert.equal(root.control("proof-script").value, "");
+  root.control("tactic-input").value = "rfl";
+  root.control("apply-button").emit("click");
+  assert.equal(completed("numbers.identity"), true);
+});

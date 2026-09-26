@@ -34,9 +34,14 @@ A successful script commits every tactic to the normal tactic history. It may
 leave pending goals; continue with another script or the single-tactic input.
 Each tactic sees the state produced by the preceding tactic, including newly
 introduced local names and the next focused goal after a case is solved.
+**Undo last tactic** reverses one successful tactic at a time, including tactics
+from a successful script. A rejected script creates no undo steps and leaves
+earlier steps available. Undoing proof completion also removes the current
+exercise's completion mark. The script draft is retained, while diagnostics for
+the previous proof state are cleared.
 
 If any line fails, all changes from that run are discarded. Existing goals,
-their focus, and tactic history are restored, and the editor keeps the source
+their focus, tactic history, and undo history are restored, and the editor keeps the source
 for correction. Errors name the original physical line, including blank and
 comment lines in the count. For example:
 

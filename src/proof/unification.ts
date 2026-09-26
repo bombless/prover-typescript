@@ -1,5 +1,5 @@
 import { Term } from '../syntax/ast';
-import { shift } from '../kernel/reduction';
+import { shift, definitionalEqual } from '../kernel/reduction';
 import { MetaContext, MetaRef, coreTerm, metaTerm } from './metavariable/meta';
 
 export type UnificationTerm = Term | MetaRef;
@@ -126,7 +126,23 @@ function occurs(id: number, term: UnificationTerm, context: MetaContext): boolea
   }
 }
 
+/** Only fully Core subtrees may cross into Kernel reduction. */
+function isCoreTerm(term: UnificationTerm): term is Term {
+  switch (term.kind) {
+    case 'meta': return false;
+    case 'Type': case 'Nat': case 'Zero': case 'Var': return true;
+    case 'Pi': case 'Lambda': return isCoreTerm(term.domain) && isCoreTerm(term.body);
+    case 'App': return isCoreTerm(term.fn) && isCoreTerm(term.arg);
+    case 'Succ': return isCoreTerm(term.value);
+    case 'NatRec': return isCoreTerm(term.motive) && isCoreTerm(term.zeroCase) && isCoreTerm(term.succCase) && isCoreTerm(term.scrutinee);
+    case 'Eq': return isCoreTerm(term.type) && isCoreTerm(term.left) && isCoreTerm(term.right);
+    case 'Refl': return isCoreTerm(term.type) && isCoreTerm(term.value);
+    case 'EqRec': return isCoreTerm(term.motive) && isCoreTerm(term.reflCase) && isCoreTerm(term.left) && isCoreTerm(term.right) && isCoreTerm(term.equality);
+  }
+}
+
 function unifyCore(left: Term, right: Term, context: MetaContext, binderDepth: number): MetaContext {
+  if (isCoreTerm(left) && isCoreTerm(right) && definitionalEqual(left, right)) return context;
   if (left.kind !== right.kind) throw new UnificationError(`Cannot unify ${left.kind} with ${right.kind}`);
   const nested = (a: UnificationTerm, b: UnificationTerm, next: MetaContext): MetaContext => unifyAtDepth(a, b, next, binderDepth);
   switch (left.kind) {

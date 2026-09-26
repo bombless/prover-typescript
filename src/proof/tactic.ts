@@ -3,7 +3,7 @@ import { definitionalEqual, normalize, shift, whnf } from '../kernel/reduction';
 import { Term, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
-import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
+import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify, whnfUnification } from './unification';
 
 export class TacticError extends Error {
   constructor(message: string) { super(message); this.name = 'TacticError'; }
@@ -292,19 +292,21 @@ export class TacticSession {
 
   apply(term: Term): TacticSession {
     const hole = this.firstHole();
-    let currentType: Term;
-    try { currentType = whnf(infer(contextTypes(hole.goal.context), term)); }
+    const context = contextTypes(hole.goal.context);
+    let originalType: Term;
+    try { originalType = whnf(infer(context, term)); }
     catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
 
+    let currentType: UnificationTerm = originalType;
     let metaContext = MetaContext.empty();
-    const argumentsForProof: Array<{ readonly type: UnificationTerm; readonly meta: UnificationTerm; readonly implicit: boolean }> = [];
+    const argumentsForProof: Array<{ readonly meta: UnificationTerm; readonly implicit: boolean }> = [];
     while (currentType.kind === 'Pi') {
       const created = metaContext.create(hole.goal.context.length, currentType.domain);
       metaContext = created.context;
-      argumentsForProof.push({ type: currentType.domain, meta: created.term, implicit: currentType.implicit === true });
-      currentType = whnf(substituteUnification(currentType.body, created.term) as Term);
+      argumentsForProof.push({ meta: created.term, implicit: currentType.implicit === true });
+      currentType = whnfUnification(substituteUnification(currentType.body, created.term));
     }
-    if (argumentsForProof.length === 0) throw new TacticError(`apply expected a function, found ${show(currentType)}`);
+    if (argumentsForProof.length === 0) throw new TacticError(`apply expected a function, found ${show(originalType)}`);
 
     try { metaContext = unify(currentType, hole.goal.type, metaContext); }
     catch (error) {
@@ -314,22 +316,41 @@ export class TacticSession {
 
     const childHoles: Hole[] = [];
     const argumentNodes: ProofNode[] = [];
+    // Replay the original telescope with materialized arguments. Unification
+    // is only an inference aid: its assignments must still have the expected
+    // Core types and produce the focused goal, including beneath binders.
+    let appliedType: UnificationTerm = originalType;
     for (const argument of argumentsForProof) {
+      appliedType = whnfUnification(appliedType);
+      if (appliedType.kind !== 'Pi') throw new TacticError('apply expected a function while checking inferred arguments');
+      const body = appliedType.body;
+      let argumentType: Term;
+      try { argumentType = toCoreTerm(appliedType.domain, metaContext); }
+      catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
       const resolved = metaContext.resolve((argument.meta as { kind: 'meta'; id: number }).id);
       if (resolved.kind === 'term') {
-        argumentNodes.push({ kind: 'term', term: resolved.term, depth: hole.depth });
+        let argumentTerm: Term;
+        try {
+          argumentTerm = toCoreTerm(argument.meta, metaContext);
+          check(context, argumentTerm, argumentType);
+        } catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+        argumentNodes.push({ kind: 'term', term: argumentTerm, depth: hole.depth });
+        appliedType = substituteUnification(body, argumentTerm);
       } else if (argument.implicit) {
         throw new TacticError(`Could not infer implicit argument ?m${resolved.id}`);
       } else {
-        let childType: Term;
-        try { childType = toCoreTerm(argument.type, metaContext); }
-        catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
-        const childGoal = goal(hole.goal.context, childType);
+        const childGoal = goal(hole.goal.context, argumentType);
         const child = { id: childGoal.id!, goal: childGoal, depth: hole.depth };
         childHoles.push(child);
         argumentNodes.push({ kind: 'hole', id: child.id });
+        appliedType = substituteUnification(body, argument.meta);
       }
     }
+    try {
+      if (!definitionalEqual(toCoreTerm(whnfUnification(appliedType), metaContext), hole.goal.type)) {
+        throw new TacticError('apply result mismatch after checking inferred arguments');
+      }
+    } catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
 
     let node: ProofNode = { kind: 'term', term, depth: hole.depth };
     for (const argumentNode of argumentNodes) node = { kind: 'app', fn: node, arg: argumentNode };

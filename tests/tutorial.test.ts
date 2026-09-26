@@ -37,18 +37,13 @@ test("registry exercises all load real proof goals", () => {
   }
 });
 
-test("ten exercises complete through RealProofEngine and Kernel", () => {
+test("every displayed tutorial path completes through RealProofEngine and Kernel", async (t) => {
   const engine = new RealProofEngine();
-  prove(engine, "zero", ["rfl"]);
-  prove(engine, "identity", ["intro", "rfl"]);
-  prove(engine, "zero_plus_n", ["intro", "rfl"]);
-  prove(engine, "add_zero", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
-  prove(engine, "add_succ", ["exact add_succ"]);
-  prove(engine, "assumption", ["intro", "intro", "assumption"]);
-  prove(engine, "equality_rewrite", ["intro", "intro", "intro", "intro", "rewrite h", "rfl"]);
-  prove(engine, "add_zero", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
-  prove(engine, "zero_add", ["intro", "rfl"]);
-  prove(engine, "succ_add", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
+  for (const exercise of EXERCISES) {
+    await t.test(exercise.id, () => {
+      prove(engine, exercise.theoremId, exercise.tacticHint.split(";").map((tactic) => tactic.trim()));
+    });
+  }
 });
 
 test("rewrite success and failure are real and failed rewrite rolls back", () => {

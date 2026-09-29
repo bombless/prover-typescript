@@ -1,6 +1,7 @@
 import {
   SurfaceTerm,
   surfaceApp,
+  surfaceArrow,
   surfaceEq,
   surfaceLambda,
   surfaceNat,
@@ -55,7 +56,13 @@ class Parser {
     if (this.current.kind !== 'eof') throw this.error(`Unexpected token '${this.current.text}'`);
     return term;
   }
-  private parseTerm(): SurfaceTerm { return this.current.kind === 'lparen' && this.looksLikeBinder() ? this.parseBinder() : this.parseApplication(); }
+  private parseTerm(): SurfaceTerm {
+    if (this.current.kind === 'lparen' && this.looksLikeBinder()) return this.parseBinder();
+    const domain = this.parseApplication();
+    if (this.current.kind !== 'arrow') return domain;
+    this.position += 1;
+    return surfaceArrow(domain, this.parseTerm());
+  }
   private parseBinder(): SurfaceTerm {
     this.expect('lparen');
     const name = this.expect('identifier').text;

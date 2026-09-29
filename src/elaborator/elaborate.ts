@@ -14,6 +14,7 @@ import {
   eqRec,
 } from '../syntax/ast';
 import { SurfaceTerm } from '../syntax/surface';
+import { shift } from '../kernel/reduction';
 import { Environment } from '../environment/environment';
 
 export class ElaborationError extends Error {
@@ -44,6 +45,13 @@ export function elaborate(term: SurfaceTerm, context: LocalContext = [], environ
   switch (term.kind) {
     case 'Var': return resolveVariable(term.name, context, environment);
     case 'Sort': return Type;
+    case 'Arrow': {
+      const domain = elaborate(term.domain, context, environment);
+      const codomain = elaborate(term.codomain, context, environment);
+      // Core Pi still binds a de Bruijn variable. Lift free references without
+      // adding a source name that could shadow an existing local or global.
+      return pi(domain, shift(codomain, 1), '_');
+    }
     case 'Pi': {
       const domain = elaborate(term.domain, context, environment);
       const body = elaborate(term.body, [...context, term.name], environment);

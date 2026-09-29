@@ -2,6 +2,7 @@ export type SurfaceTerm =
   | SurfaceVar
   | SurfaceSort
   | SurfacePi
+  | SurfaceArrow
   | SurfaceLambda
   | SurfaceApp
   | SurfaceNat
@@ -26,6 +27,13 @@ export interface SurfacePi {
   readonly name: string;
   readonly domain: SurfaceTerm;
   readonly body: SurfaceTerm;
+}
+
+/** A nondependent function type; its codomain introduces no source-level name. */
+export interface SurfaceArrow {
+  readonly kind: 'Arrow';
+  readonly domain: SurfaceTerm;
+  readonly codomain: SurfaceTerm;
 }
 
 export interface SurfaceLambda {
@@ -95,6 +103,10 @@ export function surfaceVar(name: string): SurfaceVar {
 
 export function surfacePi(name: string, domain: SurfaceTerm, body: SurfaceTerm): SurfacePi {
   return { kind: 'Pi', name, domain, body };
+}
+
+export function surfaceArrow(domain: SurfaceTerm, codomain: SurfaceTerm): SurfaceArrow {
+  return { kind: 'Arrow', domain, codomain };
 }
 
 export function surfaceLambda(name: string, domain: SurfaceTerm, body: SurfaceTerm): SurfaceLambda {

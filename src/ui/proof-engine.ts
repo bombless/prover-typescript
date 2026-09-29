@@ -340,9 +340,3 @@ export const REAL_THEOREM_LIST = Object.values(REAL_THEOREMS).map((theorem, inde
   id: theorem.name,
   label: `${String(index + 1).padStart(2, "0")}  ${theorem.name}`,
 }));
-
-
-
-
-
-

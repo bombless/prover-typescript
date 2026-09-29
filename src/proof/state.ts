@@ -24,31 +24,56 @@ export interface ProofState {
 
 let nextGoalId = 0;
 
+function validateGoalId(id: GoalId): void {
+  if (!Number.isSafeInteger(id) || id < 0) {
+    throw new RangeError('Goal ID must be a non-negative safe integer');
+  }
+}
+
 function freshGoalId(): GoalId {
+  if (!Number.isSafeInteger(nextGoalId)) throw new RangeError('Goal ID space exhausted');
   return nextGoalId++;
 }
 
 export function goal(context: Context, type: Term, caseName?: string, id: GoalId = freshGoalId()): Goal {
+  validateGoalId(id);
   if (id >= nextGoalId) nextGoalId = id + 1;
   return { id, context: [...context], type, ...(caseName === undefined ? {} : { caseName }) };
 }
 
 function normalizeGoals(goals: readonly Goal[]): Goal[] {
+  // Stage allocation locally: a rejected state must not consume identities.
+  let nextId = nextGoalId;
+  for (const { id } of goals) {
+    if (id !== undefined) {
+      validateGoalId(id);
+      if (id >= nextId) nextId = id + 1;
+    }
+  }
+  const allocate = (): GoalId => {
+    if (!Number.isSafeInteger(nextId)) throw new RangeError('Goal ID space exhausted');
+    return nextId++;
+  };
   const used = new Set<GoalId>();
   return goals.map(({ id, context, type, caseName }) => {
-    let stableId = id ?? freshGoalId();
-    if (used.has(stableId)) stableId = freshGoalId();
+    let stableId = id ?? allocate();
+    if (used.has(stableId)) stableId = allocate();
     used.add(stableId);
-    return goal(context, type, caseName, stableId);
+    return { id: stableId, context: [...context], type, ...(caseName === undefined ? {} : { caseName }) };
   });
 }
 
 export function proofState(goals: readonly Goal[], focusedGoalId?: GoalId | null): ProofState {
+  if (focusedGoalId !== undefined && focusedGoalId !== null) validateGoalId(focusedGoalId);
   const normalized = normalizeGoals(goals);
   if (normalized.length === 0) return { goals: [], focusedGoalId: null };
   const nextFocus = focusedGoalId ?? normalized[0].id!;
   if (!normalized.some(item => item.id === nextFocus)) {
     throw new RangeError(`Focused goal does not exist: ${String(nextFocus)}`);
+  }
+  // Commit only after normalization and focus validation both succeed.
+  for (const { id } of normalized) {
+    if (id! >= nextGoalId) nextGoalId = id! + 1;
   }
   return { goals: normalized, focusedGoalId: nextFocus };
 }

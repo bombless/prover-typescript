@@ -8,6 +8,10 @@ const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("UI root element #app was not found");
 const root = app;
 
+// Keep the active proof and progress for the lifetime of this page. Hash
+// navigation only remounts the view; selecting an exercise still resets it.
+const renderProofCourse = createProofCourse();
+
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
 }
@@ -16,7 +20,7 @@ function renderKVRoute(): void {
   renderKVCacheLab(root);
 }
 
-function renderProofCourse(): void {
+function createProofCourse(): (exerciseId?: string) => void {
   const engine = new RealProofEngine();
   let currentExerciseId = NATURAL_NUMBERS_LESSON.exercises[0].id;
   let state: ProofStateView | null = initialTheoremState(NATURAL_NUMBERS_LESSON.exercises[0], (id) => engine.loadTheorem(id));
@@ -54,8 +58,9 @@ function renderProofCourse(): void {
     return `<aside class="tactic-panel" aria-label="Proof tools"><div class="card-title">Available Tactics</div><div class="tactic-suggestions">${available.length ? available.map((tactic) => `<button class="tactic-suggestion" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.syntax.trim()}</code><span>${tactic.description}</span></button>`).join("") : `<p class="muted">No automatic suggestions.</p>`}</div><div class="tactic-other"><div class="card-title">Other Tactics</div>${other.map((tactic) => `<button class="tactic-other-item" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.label}</code></button>`).join("")}</div><div class="tactic-other theorem-panel"><div class="card-title">Theorems</div><div class="theorem-list">${theoremItems}</div></div></aside>`;
   }
 
-  function selectExercise(exercise: Exercise): void {
+  function selectExercise(exercise: Exercise, updateHash = true): void {
     currentExerciseId = exercise.id;
+    if (updateHash) location.hash = `exercise=${encodeURIComponent(exercise.id)}`;
     state = initialTheoremState(exercise, (id) => engine.loadTheorem(id));
     tacticInputValue = "";
     statusKind = "neutral";
@@ -98,6 +103,7 @@ function renderProofCourse(): void {
     root.querySelector<HTMLButtonElement>("#next-button")?.addEventListener("click", () => { if (next) selectExercise(next); });
     const input = root.querySelector<HTMLInputElement>("#tactic-input");
     const apply = root.querySelector<HTMLButtonElement>("#apply-button");
+    input?.addEventListener("input", () => { tacticInputValue = input.value; });
     const applyTactic = () => {
       if (!input || !state) return;
       tacticInputValue = input.value;
@@ -124,12 +130,27 @@ function renderProofCourse(): void {
     input?.addEventListener("keydown", (event) => { if (event.key === "Enter") applyTactic(); });
   }
 
-  render();
+  return (exerciseId?: string) => {
+    const requested = NATURAL_NUMBERS_LESSON.exercises.find((exercise) => exercise.id === exerciseId);
+    if (requested && requested.id !== currentExerciseId) selectExercise(requested, false);
+    else if (!root.querySelector(".app-shell")) render();
+    // Only the public exercise identifier goes in the URL. Proof drafts,
+    // commands, progress, and personal data remain in this page's memory.
+    const canonical = `#exercise=${encodeURIComponent(currentExerciseId)}`;
+    if (location.hash !== canonical) history.replaceState(null, "", canonical);
+  };
 }
 
 function renderRoute(): void {
   if (location.hash === "#kv-cache") renderKVRoute();
-  else renderProofCourse();
+  else {
+    let exerciseId: string | undefined;
+    if (location.hash.startsWith("#exercise=")) {
+      try { exerciseId = decodeURIComponent(location.hash.slice("#exercise=".length)); }
+      catch { /* Malformed links return to the current course exercise. */ }
+    }
+    renderProofCourse(exerciseId);
+  }
 }
 
 window.addEventListener("hashchange", renderRoute);

@@ -65,6 +65,7 @@ class TestRoot {
 
 function loadApp(): TestRoot {
   const root = new TestRoot();
+  const location = { hash: "" };
   const filename = require.resolve("../src/ui/app");
   const nativeRequire = createRequire(filename);
   runInNewContext(readFileSync(filename, "utf8"), {
@@ -76,7 +77,8 @@ function loadApp(): TestRoot {
     },
     document: { querySelector: () => root },
     window: { addEventListener() {} },
-    location: { hash: "" },
+    location,
+    history: { replaceState(_data: unknown, _title: string, hash: string) { location.hash = hash; } },
   });
   return root;
 }

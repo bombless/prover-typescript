@@ -1,6 +1,6 @@
 import { check, infer, show } from '../kernel/typecheck';
 import { definitionalEqual, normalize, shift, whnf } from '../kernel/reduction';
-import { Term, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
+import { Term, Type, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
 import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
@@ -175,6 +175,18 @@ export class TacticSession {
   }
 
   solveCurrentGoal(term: Term): TacticSession { return this.exact(term); }
+
+  /** Present the focused target using a definitionally equal Core type. */
+  change(target: Term): TacticSession {
+    const hole = this.firstHole();
+    try { check(contextTypes(hole.goal.context), target, Type); }
+    catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+    if (!definitionalEqual(target, hole.goal.type)) {
+      throw new TacticError('change requires a definitionally equal target');
+    }
+    const nextGoal = goal(hole.goal.context, target, hole.goal.caseName, hole.id);
+    return this.withReplacement(hole.id, [{ ...hole, goal: nextGoal }], this.root);
+  }
 
   rfl(): TacticSession {
     const hole = this.firstHole();

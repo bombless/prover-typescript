@@ -1,6 +1,6 @@
 import "./styles.css";
 import { renderBracketedExpression } from "./bracket-renderer";
-import { RealProofEngine, REAL_THEOREM_LIST, TACTICS, type DisplayProofState, type ProofStateView } from "./proof-engine";
+import { RealProofEngine, AVAILABLE_THEOREM_LIST, TACTICS, type DisplayProofState, type ProofStateView } from "./proof-engine";
 import { NATURAL_NUMBERS_LESSON, initialLessonProgress, initialTheoremState, isCompleted, nextExercise, recordProofResult, type Exercise } from "./tutorial";
 import { renderKVCacheLab } from "./kv-cache-lab";
 
@@ -24,6 +24,7 @@ function renderProofCourse(): void {
   let statusMessage = "Real Proof Engine";
   let statusKind: "neutral" | "success" | "error" = "neutral";
   let tacticInputValue = "";
+  let theoremFilter = "";
 
   function currentExercise(): Exercise {
     return NATURAL_NUMBERS_LESSON.exercises.find((exercise) => exercise.id === currentExerciseId) ?? NATURAL_NUMBERS_LESSON.exercises[0];
@@ -50,8 +51,8 @@ function renderProofCourse(): void {
     const available = suggestions.filter((tactic) => tactic.id !== "exact" && tactic.id !== "apply");
     const otherIds = ["exact", "apply", "rewrite", "induction"];
     const other = otherIds.map((id) => TACTICS.find((tactic) => tactic.id === id)).filter((tactic): tactic is NonNullable<typeof tactic> => !!tactic);
-    const theoremItems = REAL_THEOREM_LIST.map((theorem) => `<button class="tactic-other-item theorem-item" type="button" data-theorem="${theorem.id}" title="Use theorem ${theorem.id}"><code>${theorem.label}</code><span>Use</span></button>`).join("");
-    return `<aside class="tactic-panel" aria-label="Proof tools"><div class="card-title">Available Tactics</div><div class="tactic-suggestions">${available.length ? available.map((tactic) => `<button class="tactic-suggestion" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.syntax.trim()}</code><span>${tactic.description}</span></button>`).join("") : `<p class="muted">No automatic suggestions.</p>`}</div><div class="tactic-other"><div class="card-title">Other Tactics</div>${other.map((tactic) => `<button class="tactic-other-item" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.label}</code></button>`).join("")}</div><div class="tactic-other theorem-panel"><div class="card-title">Theorems</div><div class="theorem-list">${theoremItems}</div></div></aside>`;
+    const theoremItems = AVAILABLE_THEOREM_LIST.map((theorem) => `<button class="tactic-other-item theorem-item" type="button" data-theorem="${theorem.id}" title="Use theorem ${theorem.id}"><code>${theorem.label}</code><span>Use</span></button>`).join("");
+    return `<aside class="tactic-panel" aria-label="Proof tools"><div class="card-title">Available Tactics</div><div class="tactic-suggestions">${available.length ? available.map((tactic) => `<button class="tactic-suggestion" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.syntax.trim()}</code><span>${tactic.description}</span></button>`).join("") : `<p class="muted">No automatic suggestions.</p>`}</div><div class="tactic-other"><div class="card-title">Other Tactics</div>${other.map((tactic) => `<button class="tactic-other-item" type="button" data-tactic="${tactic.syntax}" title="${tactic.description}"><code>${tactic.label}</code></button>`).join("")}</div><div class="tactic-other theorem-panel"><div class="card-title">Available Theorems</div><label for="theorem-filter">Find a theorem</label><input id="theorem-filter" type="search" value="${escapeHtml(theoremFilter)}" aria-controls="theorem-list" autocomplete="off" placeholder="Filter by name"><p id="theorem-filter-status" class="muted" role="status" aria-live="polite"></p><div id="theorem-list" class="theorem-list">${theoremItems}</div></div></aside>`;
   }
 
   function selectExercise(exercise: Exercise): void {
@@ -96,6 +97,21 @@ function renderProofCourse(): void {
 
     root.querySelectorAll<HTMLButtonElement>("[data-exercise]").forEach((button) => button.addEventListener("click", () => { const selected = NATURAL_NUMBERS_LESSON.exercises.find((item) => item.id === button.dataset.exercise); if (selected) selectExercise(selected); }));
     root.querySelector<HTMLButtonElement>("#next-button")?.addEventListener("click", () => { if (next) selectExercise(next); });
+    const filter = root.querySelector<HTMLInputElement>("#theorem-filter");
+    const filterTheorems = () => {
+      if (!filter) return;
+      theoremFilter = filter.value;
+      const query = theoremFilter.trim().toLowerCase();
+      let count = 0;
+      root.querySelectorAll<HTMLButtonElement>("[data-theorem]").forEach((button) => {
+        button.hidden = !(button.dataset.theorem ?? "").toLowerCase().includes(query);
+        if (!button.hidden) count += 1;
+      });
+      const message = root.querySelector<HTMLParagraphElement>("#theorem-filter-status");
+      if (message) message.textContent = count === 0 ? "No matching theorems." : `${count} of ${AVAILABLE_THEOREM_LIST.length} theorems shown.`;
+    };
+    filter?.addEventListener("input", filterTheorems);
+    filterTheorems();
     const input = root.querySelector<HTMLInputElement>("#tactic-input");
     const apply = root.querySelector<HTMLButtonElement>("#apply-button");
     const applyTactic = () => {

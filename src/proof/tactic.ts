@@ -1,6 +1,6 @@
 import { check, infer, show } from '../kernel/typecheck';
 import { definitionalEqual, normalize, shift, whnf } from '../kernel/reduction';
-import { Term, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
+import { Term, Type, Nat, Zero, app, eq, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
 import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
@@ -15,6 +15,7 @@ type ProofNode =
   | { readonly kind: 'lambda'; readonly domain: Term; readonly name?: string; readonly body: ProofNode }
   | { readonly kind: 'app'; readonly fn: ProofNode; readonly arg: ProofNode }
   | { readonly kind: 'eqRec'; readonly motive: Term; readonly left: Term; readonly right: Term; readonly equality: Term; readonly reflCase: ProofNode }
+  | { readonly kind: 'transitivity'; readonly type: Term; readonly left: Term; readonly middle: Term; readonly right: Term; readonly first: ProofNode; readonly second: ProofNode }
   | { readonly kind: 'natRec'; readonly motive: Term; readonly scrutinee: Term; readonly zeroCase: ProofNode; readonly succCase: ProofNode };
 
 interface Hole { readonly id: GoalId; readonly goal: Goal; readonly depth: number; }
@@ -81,6 +82,7 @@ function replaceNode(root: ProofNode, id: GoalId, replacement: ProofNode): Proof
   if (root.kind === 'lambda') return { ...root, body: replaceNode(root.body, id, replacement) };
   if (root.kind === 'app') return { kind: 'app', fn: replaceNode(root.fn, id, replacement), arg: replaceNode(root.arg, id, replacement) };
   if (root.kind === 'eqRec') return { ...root, reflCase: replaceNode(root.reflCase, id, replacement) };
+  if (root.kind === 'transitivity') return { ...root, first: replaceNode(root.first, id, replacement), second: replaceNode(root.second, id, replacement) };
   return { ...root, zeroCase: replaceNode(root.zeroCase, id, replacement), succCase: replaceNode(root.succCase, id, replacement) };
 }
 
@@ -91,6 +93,10 @@ function compile(root: ProofNode, depth = 0): Term {
     case 'lambda': return lambda(root.domain, compile(root.body, depth + 1), root.name);
     case 'app': return app(compile(root.fn, depth), compile(root.arg, depth));
     case 'eqRec': return eqRec(root.motive, compile(root.reflCase, depth), root.left, root.right, root.equality);
+    case 'transitivity': return eqRec(
+      lambda(root.type, eq(shift(root.type, 1), shift(root.left, 1), variable(0))),
+      compile(root.first, depth), root.middle, root.right, compile(root.second, depth),
+    );
     case 'natRec': {
       const successorCase = lambda(
         Nat,
@@ -182,6 +188,26 @@ export class TacticSession {
     if (type.kind !== 'Eq') throw new TacticError(`rfl expected an equality goal, found ${show(type)}`);
     if (!definitionalEqual(type.left, type.right)) throw new TacticError(`rfl requires definitionally equal endpoints: ${show(type.left)} and ${show(type.right)}`);
     return this.exact(refl(type.type, type.left));
+  }
+
+  /** Split an equality at a caller-supplied, well-typed middle term. */
+  transitivity(middle: Term): TacticSession {
+    const hole = this.firstHole();
+    const type = whnf(hole.goal.type);
+    if (type.kind !== 'Eq') throw new TacticError('transitivity expected an equality goal');
+    try {
+      check(contextTypes(hole.goal.context), type, Type);
+      check(contextTypes(hole.goal.context), middle, type.type);
+    } catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+    const firstGoal = goal(hole.goal.context, eq(type.type, type.left, middle), hole.goal.caseName);
+    const secondGoal = goal(hole.goal.context, eq(type.type, middle, type.right), hole.goal.caseName);
+    const first = { id: firstGoal.id!, goal: firstGoal, depth: hole.depth };
+    const second = { id: secondGoal.id!, goal: secondGoal, depth: hole.depth };
+    const root = replaceNode(this.root, hole.id, {
+      kind: 'transitivity', type: type.type, left: type.left, middle, right: type.right,
+      first: { kind: 'hole', id: first.id }, second: { kind: 'hole', id: second.id },
+    });
+    return this.withReplacement(hole.id, [first, second], root);
   }
 
   rewrite(equalityProof: Term): TacticSession {

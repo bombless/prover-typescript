@@ -10,6 +10,7 @@ import { zeroAddType } from "../library/zero-add";
 import { succAddType } from "../library/succ-add";
 import { addSuccProof, addSuccType } from "../library/add-succ";
 import { definitionalEqual, shift, whnf } from "../kernel/reduction";
+import { GEOMETRY_BENCHMARK } from "../library/geometry";
 
 export interface ContextEntryView { name: string; type: string; }
 export interface GoalView { id: string; target: string; context: ContextEntryView[]; }
@@ -88,6 +89,11 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   assumption: { name: "assumption", type: { kind: "Pi", domain: { kind: "Nat" }, body: { kind: "Pi", domain: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 0, name: "n" }, right: { kind: "Var", index: 0, name: "n" } }, body: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 1, name: "n" }, right: { kind: "Var", index: 1, name: "n" } }, name: "h" }, name: "n" } },
   apply: { name: "apply", type: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Zero" }, right: { kind: "Zero" } } },
 };
+
+const GEOMETRY_THEOREMS = new Map(GEOMETRY_BENCHMARK.map((item) => [
+  item.id,
+  { name: item.id, type: item.type, proof: item.proof },
+]));
 
 function cloneView(state: ProofStateView): ProofStateView {
   return { theoremName: state.theoremName, completed: state.completed, goals: state.goals.map((goal) => ({ id: goal.id, target: goal.target, context: goal.context.map((entry) => ({ ...entry })) })) };
@@ -235,7 +241,7 @@ export class RealProofEngine implements ProofEngine {
   private history: string[] = [];
 
   loadTheorem(id: string): ProofStateView {
-    const theorem = REAL_THEOREMS[id] ?? REAL_THEOREMS.zero;
+    const theorem = REAL_THEOREMS[id] ?? GEOMETRY_THEOREMS.get(id) ?? REAL_THEOREMS.zero;
     this.theoremName = theorem.name;
     this.session = tacticSession(proofState([{ context: [], type: theorem.type }]));
     this.history = [];
@@ -280,7 +286,7 @@ export class RealProofEngine implements ProofEngine {
           if (!goal) throw new TacticError("No goals remain");
           // Tutorial theorem aliases are resolved at the UI adapter boundary;
           // the resulting Core term still crosses the normal Kernel check.
-          const term = argument === "add_succ" ? addSuccProof : parseArgument(argument, goal.context);
+          const term = argument === "add_succ" ? addSuccProof : GEOMETRY_THEOREMS.get(argument)?.proof ?? parseArgument(argument, goal.context);
           this.session = this.session.exact(term);
           break;
         }
@@ -331,7 +337,8 @@ export const REAL_THEOREM_LIST = Object.values(REAL_THEOREMS).map((theorem, inde
   label: `${String(index + 1).padStart(2, "0")}  ${theorem.name}`,
 }));
 
-
-
-
+export const GEOMETRY_THEOREM_LIST = GEOMETRY_BENCHMARK.map((theorem, index) => ({
+  id: theorem.id,
+  label: String(index + 1).padStart(2, "0") + "  " + theorem.id.replace("geometry.", ""),
+}));
 

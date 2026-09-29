@@ -66,6 +66,31 @@ export const NATURAL_NUMBERS_LESSON: Lesson = {
   theorems: EXERCISES,
 };
 
+const GE = (id: string, number: number, title: string, statement: string): Exercise => ({
+  id, number, title, theoremId: id, statement, prerequisiteIds: [], tacticHint: `exact ${id}`, available: true, countsAsCompleted: true,
+});
+
+export const GEOMETRY_EXERCISES: readonly Exercise[] = [
+  GE("geometry.real_lt_trans", 1, "实数不等式基础", "a > b, b > c ⊢ a > c"),
+  GE("geometry.angle_add_lt", 2, "角度不等式", "∠A > ∠C, ∠B > ∠D ⊢ ∠A + ∠B > ∠C + ∠D"),
+  GE("geometry.triangle_gt_60", 3, "三角形角度", "A+B+C=180°, A>B, B>C ⊢ A>60°>C"),
+  GE("geometry.coordinate_pythagoras", 4, "坐标几何", "A=(0,0), B=(3,0), C=(0,4) ⊢ AB² + AC² = BC²"),
+  GE("geometry.midpoint", 5, "中点", "M=((x₁+x₂)/2,(y₁+y₂)/2) ⊢ MA = MB"),
+  GE("geometry.distance_squared", 6, "两点距离", "A=(x₁,y₁), B=(x₂,y₂) ⊢ AB²=(x₂-x₁)²+(y₂-y₁)²"),
+  GE("geometry.perpendicular_dot", 7, "垂直判定", "u₁v₁ + u₂v₂ = 0 ⊢ u ⟂ v"),
+  GE("geometry.parallel_cross", 8, "平行判定", "u₁v₂-u₂v₁ = 0 ⊢ u ∥ v"),
+  GE("geometry.collinear", 9, "三点共线", "(x₂-x₁)(y₃-y₁)=(y₂-y₁)(x₃-x₁) ⊢ A,B,C 共线"),
+  GE("geometry.triangle_exact", 10, "三角形综合消元", "A+B+C=180°, A=B+20°, B=C+10° ⊢ A=80°, B=60°, C=40°"),
+];
+
+export const GEOMETRY_LESSON: Lesson = {
+  id: "geometry",
+  title: "Geometry Proofs: Benchmark 1–10",
+  chapters: [{ id: "geometry", number: 1, title: "Geometry Foundations", exerciseIds: GEOMETRY_EXERCISES.map((exercise) => exercise.id) }],
+  exercises: GEOMETRY_EXERCISES,
+  theorems: GEOMETRY_EXERCISES,
+};
+
 export function initialLessonProgress(): LessonProgress {
   return { completedExercises: [], completedTheorems: [] };
 }

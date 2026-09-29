@@ -1,7 +1,7 @@
 import "./styles.css";
 import { renderBracketedExpression } from "./bracket-renderer";
 import { RealProofEngine, REAL_THEOREM_LIST, TACTICS, type DisplayProofState, type ProofStateView } from "./proof-engine";
-import { NATURAL_NUMBERS_LESSON, initialLessonProgress, initialTheoremState, isCompleted, nextExercise, recordProofResult, type Exercise } from "./tutorial";
+import { NATURAL_NUMBERS_LESSON, GEOMETRY_LESSON, initialLessonProgress, initialTheoremState, isCompleted, nextExercise, recordProofResult, type Exercise, type Lesson } from "./tutorial";
 import { renderKVCacheLab } from "./kv-cache-lab";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -16,21 +16,21 @@ function renderKVRoute(): void {
   renderKVCacheLab(root);
 }
 
-function renderProofCourse(): void {
+function renderProofCourse(lesson: Lesson = NATURAL_NUMBERS_LESSON): void {
   const engine = new RealProofEngine();
-  let currentExerciseId = NATURAL_NUMBERS_LESSON.exercises[0].id;
-  let state: ProofStateView | null = initialTheoremState(NATURAL_NUMBERS_LESSON.exercises[0], (id) => engine.loadTheorem(id));
+  let currentExerciseId = lesson.exercises[0].id;
+  let state: ProofStateView | null = initialTheoremState(lesson.exercises[0], (id) => engine.loadTheorem(id));
   let progress = initialLessonProgress();
   let statusMessage = "Real Proof Engine";
   let statusKind: "neutral" | "success" | "error" = "neutral";
   let tacticInputValue = "";
 
   function currentExercise(): Exercise {
-    return NATURAL_NUMBERS_LESSON.exercises.find((exercise) => exercise.id === currentExerciseId) ?? NATURAL_NUMBERS_LESSON.exercises[0];
+    return lesson.exercises.find((exercise) => exercise.id === currentExerciseId) ?? lesson.exercises[0];
   }
 
   function currentChapter() {
-    return NATURAL_NUMBERS_LESSON.chapters.find((chapter) => chapter.exerciseIds.includes(currentExerciseId)) ?? NATURAL_NUMBERS_LESSON.chapters[0];
+    return lesson.chapters.find((chapter) => chapter.exerciseIds.includes(currentExerciseId)) ?? lesson.chapters[0];
   }
 
   function renderContext(context: ProofStateView["goals"][number]["context"]): string {
@@ -74,14 +74,14 @@ function renderProofCourse(): void {
   function render(): void {
     const exercise = currentExercise();
     const chapter = currentChapter();
-    const next = nextExercise(NATURAL_NUMBERS_LESSON, exercise.id);
-    const courseComplete = NATURAL_NUMBERS_LESSON.exercises.every((item) => isCompleted(progress, item.id));
+    const next = nextExercise(lesson, exercise.id);
+    const courseComplete = lesson.exercises.every((item) => isCompleted(progress, item.id));
     root.innerHTML = `<div class="app-shell">
-      <header class="topbar"><div><div class="brand">Prover</div><div class="tagline">Curry–Howard Interactive Proofs</div></div><div class="topbar-links"><a class="github-link" href="#kv-cache">KV Cache Lab</a><span class="mode-badge">Real Proof Engine</span></div></header>
+      <header class="topbar"><div><div class="brand">Prover</div><div class="tagline">Curry–Howard Interactive Proofs</div></div><div class="topbar-links"><a class="github-link" href="#natural">自然数游戏</a><a class="github-link" href="#geometry">几何证明</a><a class="github-link" href="#kv-cache">KV Cache Lab</a><span class="mode-badge">Real Proof Engine</span></div></header>
       <main class="workspace">
         <aside class="sidebar" aria-label="Chapter and exercise navigator">
-          <div class="section-label">Course</div><h2>${NATURAL_NUMBERS_LESSON.title}</h2>
-          ${NATURAL_NUMBERS_LESSON.chapters.map((item) => `<section class="chapter"><div class="chapter-title">Chapter ${item.number} · ${item.title}</div>${item.exerciseIds.map((id) => { const itemEx = NATURAL_NUMBERS_LESSON.exercises.find((x) => x.id === id)!; return `<button class="theorem-item ${exercise.id === id ? "active" : ""} ${isCompleted(progress, id) ? "completed" : ""}" data-exercise="${id}" type="button"><span class="status">${isCompleted(progress, id) ? "✓" : itemEx.number}</span><span>${itemEx.title}</span></button>`; }).join("")}</section>`).join("")}
+          <div class="section-label">Course</div><h2>${lesson.title}</h2>
+          ${lesson.chapters.map((item) => `<section class="chapter"><div class="chapter-title">Chapter ${item.number} · ${item.title}</div>${item.exerciseIds.map((id) => { const itemEx = lesson.exercises.find((x) => x.id === id)!; return `<button class="theorem-item ${exercise.id === id ? "active" : ""} ${isCompleted(progress, id) ? "completed" : ""}" data-exercise="${id}" type="button"><span class="status">${isCompleted(progress, id) ? "✓" : itemEx.number}</span><span>${itemEx.title}</span></button>`; }).join("")}</section>`).join("")}
         </aside>
         <section class="proof-panel">
           <div class="theorem-header"><div><div class="section-label">Chapter ${chapter.number} · Exercise ${exercise.number}</div><h1>${exercise.title}</h1><p class="theorem-statement"><code>${exercise.statement}</code></p></div></div>
@@ -129,7 +129,8 @@ function renderProofCourse(): void {
 
 function renderRoute(): void {
   if (location.hash === "#kv-cache") renderKVRoute();
-  else renderProofCourse();
+  else if (location.hash === "#geometry") renderProofCourse(GEOMETRY_LESSON);
+  else renderProofCourse(NATURAL_NUMBERS_LESSON);
 }
 
 window.addEventListener("hashchange", renderRoute);

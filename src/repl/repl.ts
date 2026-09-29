@@ -42,24 +42,36 @@ export function processLine(input: string, environment: Environment = new Global
 export async function startRepl(
   input: NodeJS.ReadableStream = process.stdin,
   output: NodeJS.WritableStream = process.stdout,
+  options: { readonly interactive?: boolean } = {},
 ): Promise<void> {
-  const rl = readline.createInterface({ input, output, prompt: '> ' });
+  const terminal = Boolean(
+    (input as NodeJS.ReadableStream & { isTTY?: boolean }).isTTY
+    && (output as NodeJS.WritableStream & { isTTY?: boolean }).isTTY,
+  );
+  const interactive = options.interactive ?? terminal;
+  const rl = readline.createInterface({ input, output, terminal: terminal && interactive, prompt: '> ' });
   const environment = new GlobalEnvironment();
   let closed = false;
   rl.on('close', () => { closed = true; });
-  output.write('prover-typescript REPL\n');
-  rl.prompt();
-  for await (const line of rl) {
-    try {
-      const result = processLine(line, environment);
-      if (result === null) { rl.close(); return; }
-      if (result !== '') output.write(`${result}\n`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const kind = error instanceof Error ? error.name : 'Error';
-      output.write(`Error [${kind}]: ${message}\n`);
+  try {
+    if (interactive) {
+      output.write('prover-typescript REPL\n');
+      rl.prompt();
     }
-    if (closed) break;
-    rl.prompt();
+    for await (const line of rl) {
+      try {
+        const result = processLine(line, environment);
+        if (result === null) { rl.close(); return; }
+        if (result !== '') output.write(`${result}\n`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const kind = error instanceof Error ? error.name : 'Error';
+        output.write(`Error [${kind}]: ${message}\n`);
+      }
+      // Drain queued lines after EOF; only the next prompt requires open input.
+      if (!closed && interactive) rl.prompt();
+    }
+  } finally {
+    rl.close();
   }
 }

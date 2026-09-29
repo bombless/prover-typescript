@@ -194,3 +194,6 @@ pre.proof-expression { white-space: pre-wrap; word-break: keep-all; }
   .kv-dep-row { grid-template-columns: 1fr; gap: 4px; }
   .kv-dep-row > span:nth-child(2) { display: none; }
 }
+
+/* Author display rules must not override filtered theorem visibility. */
+[data-theorem][hidden] { display: none; }

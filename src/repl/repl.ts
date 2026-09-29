@@ -1,7 +1,7 @@
 import readline from 'node:readline';
 import { elaborate } from '../elaborator/elaborate';
 import { check, infer, show } from '../kernel/typecheck';
-import { GlobalEnvironment, Environment } from '../environment/environment';
+import { GlobalEnvironment, Environment, EnvironmentError } from '../environment/environment';
 import { parseCommand } from '../parser/command';
 import { ProofState } from '../proof/state';
 
@@ -21,6 +21,11 @@ export function processLine(input: string, environment: Environment = new Global
   if (line === '') return '';
   if (line === EXIT_COMMAND) return null;
   const command = parseCommand(line);
+  if (command.kind === 'names') {
+    if (!environment.names) throw new EnvironmentError('This environment does not support listing definitions');
+    const names = environment.names();
+    return names.length === 0 ? 'No definitions.' : names.join('\n');
+  }
   if (command.kind === 'term') {
     const core = elaborate(command.term, [], environment);
     return show(infer([], core));

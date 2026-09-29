@@ -7,4 +7,4 @@ printf 'Nat\n' | node dist/src/index.js
 # Type
 ```
 
-Embedders can use `startRepl(input, output, { interactive: true })` to request a terminal session, or `{ interactive: false }` to suppress terminal formatting explicitly. This option controls output presentation; it does not change command syntax or environment lifetime.
+Embedders can use `startRepl(input, output, { interactive: true })` to request the greeting and prompts on custom streams, or `{ interactive: false }` to suppress terminal formatting explicitly. This option controls output presentation; it does not change command syntax or environment lifetime.

@@ -42,3 +42,15 @@ test('interactive output requires both streams to be terminals', async () => {
 test('explicit batch mode can disable terminal formatting', async () => {
   assert.equal(await capture('0\n', false), 'Nat\n');
 });
+
+test('a single piped chunk drains dependent declarations through EOF', async () => {
+  assert.equal(await capture('def zero := 0\ndef one := Succ zero\none\n'), 'defined zero\ndefined one\nNat\n');
+});
+
+test('queued commands continue after a reported batch error', async () => {
+  assert.equal(await capture('unknown\n\n0\n'), 'Error [ElaborationError]: Unknown variable: unknown\nNat\n');
+});
+
+test('explicit exit stops later commands already buffered in the pipe', async () => {
+  assert.equal(await capture('0\nexit\nunknown\n'), 'Nat\n');
+});

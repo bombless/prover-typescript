@@ -66,3 +66,30 @@ test('normalization rejects allocation after the largest explicit identity is re
     assert.throws(() => proofState([last, { context: [], type: Nat }]), /Goal ID space exhausted/);
   `);
 });
+
+test('a missing focus cannot reserve the final identity or poison later goals', () => {
+  isolated(`
+    const before = goal([], Nat).id;
+    assert.throws(() => proofState([
+      { id: Number.MAX_SAFE_INTEGER, context: [], type: Nat },
+    ], before), /Focused goal does not exist/);
+    assert.equal(goal([], Nat).id, before + 1);
+  `);
+});
+
+test('failed automatic allocation leaves all staged reservations uncommitted', () => {
+  isolated(`
+    const before = goal([], Nat).id;
+    assert.throws(() => proofState([
+      { id: Number.MAX_SAFE_INTEGER, context: [], type: Nat },
+      { context: [], type: Nat },
+    ]), /Goal ID space exhausted/);
+    assert.equal(goal([], Nat).id, before + 1);
+  `);
+});
+
+test('missing focus rolls back ordinary automatic allocations', () => {
+  const before = goal([], Nat).id!;
+  assert.throws(() => proofState([{ context: [], type: Nat }], before), /Focused goal does not exist/);
+  assert.equal(goal([], Nat).id, before + 1);
+});

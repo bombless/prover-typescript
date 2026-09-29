@@ -4,6 +4,7 @@ import { check, infer, show } from '../kernel/typecheck';
 import { GlobalEnvironment, Environment } from '../environment/environment';
 import { parseCommand } from '../parser/command';
 import { ProofState } from '../proof/state';
+import { Type } from '../syntax/ast';
 
 export const EXIT_COMMAND = 'exit';
 
@@ -34,7 +35,13 @@ export function processLine(input: string, environment: Environment = new Global
     return `theorem ${command.name}`;
   }
   const core = elaborate(command.term, [], environment);
-  infer([], core);
+  if (command.annotation !== undefined) {
+    const annotation = elaborate(command.annotation, [], environment);
+    check([], annotation, Type);
+    check([], core, annotation);
+  } else {
+    infer([], core);
+  }
   environment.define(command.name, core);
   return `defined ${command.name}`;
 }

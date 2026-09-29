@@ -10,6 +10,8 @@ export class EnvironmentError extends Error {
 export interface Environment {
   lookup(name: string): Term | undefined;
   define(name: string, term: Term): void;
+  /** A snapshot in declaration order, when enumeration is supported. */
+  names?(): readonly string[];
 }
 
 export class GlobalEnvironment implements Environment {
@@ -17,6 +19,10 @@ export class GlobalEnvironment implements Environment {
 
   lookup(name: string): Term | undefined {
     return this.definitions.get(name);
+  }
+
+  names(): readonly string[] {
+    return [...this.definitions.keys()];
   }
 
   define(name: string, term: Term): void {

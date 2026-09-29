@@ -66,7 +66,7 @@ export async function startRepl(
       const kind = error instanceof Error ? error.name : 'Error';
       output.write(`Error [${kind}]: ${message}\n`);
     }
-    if (closed) break;
-    if (interactive) rl.prompt();
+    // Drain queued lines after EOF; only the next prompt requires open input.
+    if (!closed && interactive) rl.prompt();
   }
 }

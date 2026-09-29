@@ -42,13 +42,20 @@ export function processLine(input: string, environment: Environment = new Global
 export async function startRepl(
   input: NodeJS.ReadableStream = process.stdin,
   output: NodeJS.WritableStream = process.stdout,
+  options: { readonly interactive?: boolean } = {},
 ): Promise<void> {
-  const rl = readline.createInterface({ input, output, prompt: '> ' });
+  const interactive = options.interactive ?? Boolean(
+    (input as NodeJS.ReadableStream & { isTTY?: boolean }).isTTY
+    && (output as NodeJS.WritableStream & { isTTY?: boolean }).isTTY,
+  );
+  const rl = readline.createInterface({ input, output, terminal: interactive, prompt: '> ' });
   const environment = new GlobalEnvironment();
   let closed = false;
   rl.on('close', () => { closed = true; });
-  output.write('prover-typescript REPL\n');
-  rl.prompt();
+  if (interactive) {
+    output.write('prover-typescript REPL\n');
+    rl.prompt();
+  }
   for await (const line of rl) {
     try {
       const result = processLine(line, environment);
@@ -60,6 +67,6 @@ export async function startRepl(
       output.write(`Error [${kind}]: ${message}\n`);
     }
     if (closed) break;
-    rl.prompt();
+    if (interactive) rl.prompt();
   }
 }

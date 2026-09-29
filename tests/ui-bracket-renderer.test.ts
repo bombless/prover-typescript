@@ -43,3 +43,26 @@ test("large Eq proof expression keeps every parenthesis group formatted recursiv
 
   assert.equal(result, `( x : Nat )\n->\n( x : Nat )\n-> Eq Nat\n(\n  (\n    (\n      fun x : Nat =>\n      (\n        fun x : Nat =>\n        (\n          Nat.rec\n          ( fun x : Nat => Nat )\n          n\n          (\n            fun x : Nat =>\n            (\n              fun x : Nat =>\n              ( Succ n )\n            )\n          )\n          ih\n        )\n      )\n    )\n    ih\n  )\n  ( Succ n )\n)\n(\n  Succ\n  (\n    (\n      (\n        fun x : Nat =>\n        (\n          fun x : Nat =>\n          (\n            Nat.rec\n            ( fun x : Nat => Nat )\n            n\n            (\n              fun x : Nat =>\n              (\n                fun x : Nat =>\n                ( Succ n )\n              )\n            )\n            ih\n          )\n        )\n      )\n      n\n    )\n  )\n)\n`);
 });
+
+
+test("deep generated expressions retain their text without overflowing the stack", () => {
+  const source = "(".repeat(8000) + "x" + ")".repeat(8000);
+  const rendered = renderBracketedExpression(source);
+  assert.equal(text(rendered), source);
+  assert.equal((rendered.match(/bracket-open/g) ?? []).length, 8000);
+  assert.equal((rendered.match(/bracket-close/g) ?? []).length, 8000);
+  assert.ok(rendered.length < source.length * 150, "Deep layout must stay linear in the input size");
+});
+
+test("deep fallback escapes text and retains whitespace", () => {
+  const source = "{".repeat(200) + "<img> & \n  x" + "}".repeat(200);
+  const rendered = renderBracketedExpression(source);
+  assert.equal(text(rendered), source);
+  assert.ok(!rendered.includes("<img>"));
+  assert.match(rendered, /&lt;img&gt; &amp;/);
+});
+
+test("deep unmatched openers remain literal without recursive parsing", () => {
+  const source = "(".repeat(8000) + "x";
+  assert.equal(renderBracketedExpression(source), source);
+});

@@ -14,10 +14,12 @@ export function renderBracketedExpression(source: string): string {
   const stack: Array<{ char: "(" | "{"; index: number; color: number }> = [];
   const matching: Record<"(" | "{", ")" | "}"> = { "(": ")", "{": "}" };
 
+  let deepestNesting = 0;
   for (let index = 0; index < source.length; index += 1) {
     const char = source[index];
     if (char === "(" || char === "{") {
       stack.push({ char, index, color: stack.length % 6 });
+      deepestNesting = Math.max(deepestNesting, stack.length);
       continue;
     }
     if (char !== ")" && char !== "}") continue;
@@ -26,6 +28,20 @@ export function renderBracketedExpression(source: string): string {
     stack.pop();
     pairs.set(opener.index, { pair: index, color: opener.color });
     pairs.set(index, { pair: opener.index, color: opener.color });
+  }
+
+  const bracket = (index: number): string => {
+    const match = pairs.get(index);
+    if (!match) return escape(source[index]);
+    const side = source[index] === "(" || source[index] === "{" ? "bracket-open" : "bracket-close";
+    return `<span class="bracket-pair bracket-color-${match.color} ${side}" data-matching-index="${match.pair}">${escape(source[index])}</span>`;
+  };
+
+  // Deep generated terms need a bounded layout as well as bounded call depth.
+  // Keep their text and bracket colors, but avoid recursive indentation once
+  // a readable nesting limit is exceeded.
+  if (deepestNesting > 128) {
+    return source.split("").map((char, index) => pairs.has(index) ? bracket(index) : escape(char)).join("");
   }
 
   const parse = (start: number, end: number): Array<Group | TextNode> => {
@@ -53,12 +69,6 @@ export function renderBracketedExpression(source: string): string {
   const hasNestedGroup = (group: Group): boolean =>
     group.children.some((child) => "open" in child);
 
-  const bracket = (index: number): string => {
-    const match = pairs.get(index);
-    if (!match) return escape(source[index]);
-    const side = source[index] === "(" || source[index] === "{" ? "bracket-open" : "bracket-close";
-    return `<span class="bracket-pair bracket-color-${match.color} ${side}" data-matching-index="${match.pair}">${escape(source[index])}</span>`;
-  };
 
   const appendText = (lines: string[], text: string, indent: number): void => {
     const normalized = text.replace(/[ \t\r\n]+/g, " ").trim();

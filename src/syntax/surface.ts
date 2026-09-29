@@ -5,6 +5,9 @@ export type SurfaceTerm =
   | SurfaceLambda
   | SurfaceApp
   | SurfaceNat
+  | SurfaceReal
+  | SurfaceCartesian
+  | SurfaceAngle
   | SurfaceZero
   | SurfaceSucc
   | SurfaceNatRec
@@ -44,6 +47,9 @@ export interface SurfaceApp {
 export interface SurfaceNat {
   readonly kind: 'Nat';
 }
+export interface SurfaceReal { readonly kind: 'Real'; }
+export interface SurfaceCartesian { readonly kind: 'Cartesian'; }
+export interface SurfaceAngle { readonly kind: 'Angle'; }
 
 export interface SurfaceZero {
   readonly kind: 'Zero';
@@ -86,6 +92,9 @@ export interface SurfaceEqRec {
 
 export const surfaceSort: SurfaceSort = { kind: 'Sort' };
 export const surfaceNat: SurfaceNat = { kind: 'Nat' };
+export const surfaceReal: SurfaceReal = { kind: 'Real' };
+export const surfaceCartesian: SurfaceCartesian = { kind: 'Cartesian' };
+export const surfaceAngle: SurfaceAngle = { kind: 'Angle' };
 export const surfaceZero: SurfaceZero = { kind: 'Zero' };
 
 export function surfaceVar(name: string): SurfaceVar {

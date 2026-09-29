@@ -3,7 +3,8 @@ import { Term, app, lambda, natRec, succ } from '../syntax/ast';
 export function shift(term: Term, amount: number, cutoff = 0): Term {
   switch (term.kind) {
     case 'Var': return { ...term, index: term.index >= cutoff ? term.index + amount : term.index };
-    case 'Type': case 'Nat': case 'Zero': return term;
+    case 'Type': case 'Nat': case 'Real': case 'Cartesian': case 'Angle': case 'Zero': case 'RealLit': case 'AngleLit': return term;
+    case 'Point': return { ...term, x: shift(term.x, amount, cutoff), y: shift(term.y, amount, cutoff) };
     case 'Pi': return { ...term, domain: shift(term.domain, amount, cutoff), body: shift(term.body, amount, cutoff + 1) };
     case 'Lambda': return { ...term, domain: shift(term.domain, amount, cutoff), body: shift(term.body, amount, cutoff + 1) };
     case 'App': return app(shift(term.fn, amount, cutoff), shift(term.arg, amount, cutoff));
@@ -21,7 +22,8 @@ export function substitute(body: Term, replacement: Term, depth = 0): Term {
       if (body.index === depth) return shift(replacement, depth);
       if (body.index > depth) return { ...body, index: body.index - 1 };
       return body;
-    case 'Type': case 'Nat': case 'Zero': return body;
+    case 'Type': case 'Nat': case 'Real': case 'Cartesian': case 'Angle': case 'Zero': case 'RealLit': case 'AngleLit': return body;
+    case 'Point': return { ...body, x: substitute(body.x, replacement, depth), y: substitute(body.y, replacement, depth) };
     case 'Pi': return { ...body, domain: substitute(body.domain, replacement, depth), body: substitute(body.body, replacement, depth + 1) };
     case 'Lambda': return { ...body, domain: substitute(body.domain, replacement, depth), body: substitute(body.body, replacement, depth + 1) };
     case 'App': return app(substitute(body.fn, replacement, depth), substitute(body.arg, replacement, depth));
@@ -63,7 +65,8 @@ export function normalize(term: Term): Term {
     return normalize(substitute(reduced.fn.body, reduced.arg));
   }
   switch (reduced.kind) {
-    case 'Type': case 'Nat': case 'Zero': case 'Var': return reduced;
+    case 'Type': case 'Nat': case 'Real': case 'Cartesian': case 'Angle': case 'Zero': case 'RealLit': case 'AngleLit': case 'Var': return reduced;
+    case 'Point': return { ...reduced, x: normalize(reduced.x), y: normalize(reduced.y) };
     case 'Pi': return { ...reduced, domain: normalize(reduced.domain), body: normalize(reduced.body) };
     case 'Lambda': return { ...reduced, domain: normalize(reduced.domain), body: normalize(reduced.body) };
     case 'App': {
@@ -91,7 +94,10 @@ export function definitionalEqual(left: Term, right: Term): boolean {
 export function structuralEqual(left: Term, right: Term): boolean {
   if (left.kind !== right.kind) return false;
   switch (left.kind) {
-    case 'Type': case 'Nat': case 'Zero': return true;
+    case 'Type': case 'Nat': case 'Real': case 'Cartesian': case 'Angle': case 'Zero': return true;
+    case 'RealLit': return left.value === (right as typeof left).value;
+    case 'AngleLit': return left.radians === (right as typeof left).radians;
+    case 'Point': return structuralEqual(left.x, (right as typeof left).x) && structuralEqual(left.y, (right as typeof left).y);
     case 'Var': return left.index === (right as typeof left).index;
     case 'Pi': case 'Lambda': {
       const r = right as typeof left;

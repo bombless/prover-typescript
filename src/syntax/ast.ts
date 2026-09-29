@@ -5,6 +5,12 @@ export type Term =
   | { readonly kind: 'Lambda'; readonly domain: Term; readonly body: Term; readonly name?: string }
   | { readonly kind: 'App'; readonly fn: Term; readonly arg: Term }
   | { readonly kind: 'Nat' }
+  | { readonly kind: 'Real' }
+  | { readonly kind: 'RealLit'; readonly value: number }
+  | { readonly kind: 'Cartesian' }
+  | { readonly kind: 'Point'; readonly x: Term; readonly y: Term }
+  | { readonly kind: 'Angle' }
+  | { readonly kind: 'AngleLit'; readonly radians: number }
   | { readonly kind: 'Zero' }
   | { readonly kind: 'Succ'; readonly value: Term }
   | { readonly kind: 'NatRec'; readonly motive: Term; readonly zeroCase: Term; readonly succCase: Term; readonly scrutinee: Term }
@@ -14,6 +20,9 @@ export type Term =
 
 export const Type: Term = { kind: 'Type' };
 export const Nat: Term = { kind: 'Nat' };
+export const Real: Term = { kind: 'Real' };
+export const Cartesian: Term = { kind: 'Cartesian' };
+export const Angle: Term = { kind: 'Angle' };
 export const Zero: Term = { kind: 'Zero' };
 
 export function variable(index: number, name?: string): Term {
@@ -62,6 +71,19 @@ export function natLiteral(n: number): Term {
   let result: Term = Zero;
   for (let i = 0; i < n; i++) result = succ(result);
   return result;
+}
+
+export function realLiteral(value: number): Term {
+  if (!Number.isFinite(value)) throw new Error('Real literal must be finite');
+  return { kind: 'RealLit', value };
+}
+
+export function point(x: Term, y: Term): Term { return { kind: 'Point', x, y }; }
+
+/** An angle represented by its measure in radians. */
+export function angleLiteral(radians: number): Term {
+  if (!Number.isFinite(radians)) throw new Error('Angle literal must be finite');
+  return { kind: 'AngleLit', radians };
 }
 
 export function freeVar(name: string): Term {

@@ -530,3 +530,14 @@ npm run build
 node --test "dist/tests/**/*.test.js"
 VITE_BASE_PATH=/prover-typescript/ npm run build:web
 ```
+
+## Geometry primitives
+
+The core syntax now includes the geometric foundations needed for coordinate proofs:
+
+- `Real` and finite `RealLit` values;
+- `Cartesian`, the type of points in the real Cartesian plane;
+- `Point(x, y)` values, checked so both coordinates have type `Real`;
+- `Angle` and finite `AngleLit` values represented in radians.
+
+`src/library/geometry.ts` provides `coordinates`, `radians`, `pointType`, and `pointEquality` helpers. These are Core terms, so theorem statements involving coordinates and angles pass through the existing Kernel type checker.

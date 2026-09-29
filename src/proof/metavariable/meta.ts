@@ -71,7 +71,8 @@ function validateAssignmentScope(variable: MetaVariable, value: MetaTerm, contex
 /** Ensure every free de Bruijn variable fits the metavariable's local scope. */
 function validateTermScope(term: Term, scopeDepth: number, binderDepth = 0): void {
   switch (term.kind) {
-    case 'Type': case 'Nat': case 'Zero': return;
+    case 'Type': case 'Nat': case 'Real': case 'Cartesian': case 'Angle': case 'Zero': case 'RealLit': case 'AngleLit': return;
+    case 'Point': validateTermScope(term.x, scopeDepth, binderDepth); validateTermScope(term.y, scopeDepth, binderDepth); return;
     case 'Var':
       if (term.index >= scopeDepth + binderDepth) throw new MetaVariableError(`Scope escape: variable #${term.index} is outside scope depth ${scopeDepth}`);
       return;

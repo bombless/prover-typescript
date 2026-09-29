@@ -10,6 +10,9 @@ import {
   surfaceVar,
   surfaceZero,
   surfaceSort,
+  surfaceReal,
+  surfaceCartesian,
+  surfaceAngle,
 } from '../syntax/surface';
 
 type TokenKind = 'identifier' | 'number' | 'lparen' | 'rparen' | 'colon' | 'arrow' | 'fatArrow' | 'eof';
@@ -27,9 +30,13 @@ function tokenize(input: string): Token[] {
     if (char === '(') { tokens.push({ kind: 'lparen', text: char, position }); position += 1; continue; }
     if (char === ')') { tokens.push({ kind: 'rparen', text: char, position }); position += 1; continue; }
     if (char === ':') { tokens.push({ kind: 'colon', text: char, position }); position += 1; continue; }
-    if (/[0-9]/.test(char)) {
+    if (/[0-9]/.test(char) || (char === '.' && /[0-9]/.test(input[position + 1] ?? ''))) {
       const start = position;
       while (position < input.length && /[0-9]/.test(input[position])) position += 1;
+      if (input[position] === '.') {
+        position += 1;
+        while (position < input.length && /[0-9]/.test(input[position])) position += 1;
+      }
       tokens.push({ kind: 'number', text: input.slice(start, position), position: start });
       continue;
     }
@@ -80,6 +87,9 @@ class Parser {
       switch (token.text) {
         case 'Type': return surfaceSort;
         case 'Nat': return surfaceNat;
+        case 'Real': return surfaceReal;
+        case 'Cartesian': return surfaceCartesian;
+        case 'Angle': return surfaceAngle;
         case 'Succ': return surfaceSucc(this.parseAtom());
         case 'Eq': return surfaceEq(this.parseAtom(), this.parseAtom(), this.parseAtom());
         case 'Refl': return surfaceRefl(this.parseAtom(), this.parseAtom());

@@ -1,4 +1,4 @@
-import { Term, Type, Nat, Zero, variable, pi, lambda, app, succ, natRec, eq, refl, eqRec } from '../syntax/ast';
+import { Term, Type, Nat, Real, Cartesian, Angle, Zero, variable, pi, lambda, app, succ, natRec, eq, refl, eqRec } from '../syntax/ast';
 import { definitionalEqual, substitute, shift, whnf } from './reduction';
 
 export type Context = readonly Term[];
@@ -13,6 +13,10 @@ export function infer(ctx: Context, term: Term): Term {
   switch (term.kind) {
     case 'Type': return Type;
     case 'Nat': return Type;
+    case 'Real': case 'Cartesian': case 'Angle': return Type;
+    case 'RealLit': return Real;
+    case 'AngleLit': return Angle;
+    case 'Point': check(ctx, term.x, Real); check(ctx, term.y, Real); return Cartesian;
     case 'Zero': return Nat;
     case 'Var': {
       const type = ctx[ctx.length - 1 - term.index];
@@ -108,6 +112,12 @@ export function show(term: Term): string {
   switch (term.kind) {
     case 'Type': return 'Type';
     case 'Nat': return 'Nat';
+    case 'Real': return 'Real';
+    case 'Cartesian': return 'Cartesian';
+    case 'Angle': return 'Angle';
+    case 'RealLit': return String(term.value);
+    case 'AngleLit': return 'angle(' + term.radians + ' rad)';
+    case 'Point': return '(' + show(term.x) + ', ' + show(term.y) + ')';
     case 'Zero': return '0';
     case 'Var': return term.name ?? `#${term.index}`;
     case 'Pi': return `(x : ${show(term.domain)}) -> ${show(term.body)}`;

@@ -26,7 +26,8 @@ function contextTypes(context: Context): readonly Term[] { return context.map((e
 function abstractEqualityTarget(term: Term, pattern: Term, depth = 0): { readonly term: Term; readonly found: boolean } {
   if (definitionalEqual(term, pattern)) return { term: variable(depth), found: true };
   switch (term.kind) {
-    case 'Type': case 'Nat': case 'Zero': case 'Var': return { term, found: false };
+    case 'Type': case 'Nat': case 'Real': case 'Cartesian': case 'Angle': case 'Zero': case 'RealLit': case 'AngleLit': case 'Var': return { term, found: false };
+    case 'Point': { const x = abstractEqualityTarget(term.x, pattern, depth); const y = abstractEqualityTarget(term.y, pattern, depth); return { term: { ...term, x: x.term, y: y.term }, found: x.found || y.found }; }
     case 'Pi': {
       const domain = abstractEqualityTarget(term.domain, pattern, depth);
       const body = abstractEqualityTarget(term.body, shift(pattern, 1), depth + 1);
@@ -105,7 +106,8 @@ function compile(root: ProofNode, depth = 0): Term {
 function abstractInductionVariable(term: Term, targetIndex: number, depth = 0): Term {
   switch (term.kind) {
     case 'Var': return term.index === targetIndex + depth ? variable(depth, term.name) : term;
-    case 'Type': case 'Nat': case 'Zero': return term;
+    case 'Type': case 'Nat': case 'Real': case 'Cartesian': case 'Angle': case 'Zero': case 'RealLit': case 'AngleLit': return term;
+    case 'Point': return { ...term, x: abstractInductionVariable(term.x, targetIndex, depth), y: abstractInductionVariable(term.y, targetIndex, depth) };
     case 'Pi': return { ...term, domain: abstractInductionVariable(term.domain, targetIndex, depth), body: abstractInductionVariable(term.body, targetIndex, depth + 1) };
     case 'Lambda': return { ...term, domain: abstractInductionVariable(term.domain, targetIndex, depth), body: abstractInductionVariable(term.body, targetIndex, depth + 1) };
     case 'App': return app(abstractInductionVariable(term.fn, targetIndex, depth), abstractInductionVariable(term.arg, targetIndex, depth));

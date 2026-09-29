@@ -111,6 +111,12 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
   switch (term.kind) {
     case "Type": return "Type";
     case "Nat": return "Nat";
+    case "Real": return "Real";
+    case "Cartesian": return "Cartesian";
+    case "Angle": return "Angle";
+    case "RealLit": return String(term.value);
+    case "AngleLit": return String(term.radians) + " rad";
+    case "Point": return "(" + formatDisplayTerm(term.x, boundNames) + ", " + formatDisplayTerm(term.y, boundNames) + ")";
     case "Zero": return "0";
     case "Succ": {
       const rendered = formatDisplayTerm(term.value, boundNames);
@@ -330,7 +336,6 @@ export const REAL_THEOREM_LIST = Object.values(REAL_THEOREMS).map((theorem, inde
   id: theorem.name,
   label: `${String(index + 1).padStart(2, "0")}  ${theorem.name}`,
 }));
-
 
 
 

@@ -1,5 +1,6 @@
 export type Term =
   | { readonly kind: 'Type' }
+  | { readonly kind: 'Axiom'; readonly name: string; readonly type: Term }
   | { readonly kind: 'Var'; readonly index: number; readonly name?: string }
   | { readonly kind: 'Pi'; readonly domain: Term; readonly body: Term; readonly name?: string; readonly implicit?: boolean }
   | { readonly kind: 'Lambda'; readonly domain: Term; readonly body: Term; readonly name?: string }
@@ -8,6 +9,10 @@ export type Term =
   | { readonly kind: 'Zero' }
   | { readonly kind: 'Succ'; readonly value: Term }
   | { readonly kind: 'NatRec'; readonly motive: Term; readonly zeroCase: Term; readonly succCase: Term; readonly scrutinee: Term }
+  | { readonly kind: 'Prod'; readonly left: Term; readonly right: Term }
+  | { readonly kind: 'Pair'; readonly left: Term; readonly right: Term; readonly leftType: Term; readonly rightType: Term }
+  | { readonly kind: 'Fst'; readonly pair: Term }
+  | { readonly kind: 'Snd'; readonly pair: Term }
   | { readonly kind: 'Eq'; readonly type: Term; readonly left: Term; readonly right: Term }
   | { readonly kind: 'Refl'; readonly type: Term; readonly value: Term }
   | { readonly kind: 'EqRec'; readonly motive: Term; readonly reflCase: Term; readonly left: Term; readonly right: Term; readonly equality: Term };
@@ -15,6 +20,11 @@ export type Term =
 export const Type: Term = { kind: 'Type' };
 export const Nat: Term = { kind: 'Nat' };
 export const Zero: Term = { kind: 'Zero' };
+
+export function axiom(name: string, type: Term): Term {
+  if (name.length === 0) throw new Error('Axiom name must not be empty');
+  return { kind: 'Axiom', name, type };
+}
 
 export function variable(index: number, name?: string): Term {
   if (!Number.isInteger(index) || index < 0) throw new Error('Variable index must be a non-negative integer');
@@ -44,6 +54,13 @@ export function succ(value: Term): Term {
 export function natRec(motive: Term, zeroCase: Term, succCase: Term, scrutinee: Term): Term {
   return { kind: 'NatRec', motive, zeroCase, succCase, scrutinee };
 }
+
+export function prod(left: Term, right: Term): Term { return { kind: 'Prod', left, right }; }
+export function pair(left: Term, right: Term, leftType: Term, rightType: Term): Term {
+  return { kind: 'Pair', left, right, leftType, rightType };
+}
+export function fst(pairTerm: Term): Term { return { kind: 'Fst', pair: pairTerm }; }
+export function snd(pairTerm: Term): Term { return { kind: 'Snd', pair: pairTerm }; }
 
 export function eq(type: Term, left: Term, right: Term): Term {
   return { kind: 'Eq', type, left, right };

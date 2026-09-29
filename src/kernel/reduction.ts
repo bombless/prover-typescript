@@ -1,14 +1,19 @@
-import { Term, app, lambda, natRec, succ } from '../syntax/ast';
+import { Term, app, lambda, natRec, succ, prod, pair, fst, snd } from '../syntax/ast';
 
 export function shift(term: Term, amount: number, cutoff = 0): Term {
   switch (term.kind) {
     case 'Var': return { ...term, index: term.index >= cutoff ? term.index + amount : term.index };
     case 'Type': case 'Nat': case 'Zero': return term;
+    case 'Axiom': return { ...term, type: shift(term.type, amount, cutoff) };
     case 'Pi': return { ...term, domain: shift(term.domain, amount, cutoff), body: shift(term.body, amount, cutoff + 1) };
     case 'Lambda': return { ...term, domain: shift(term.domain, amount, cutoff), body: shift(term.body, amount, cutoff + 1) };
     case 'App': return app(shift(term.fn, amount, cutoff), shift(term.arg, amount, cutoff));
     case 'Succ': return succ(shift(term.value, amount, cutoff));
     case 'NatRec': return natRec(shift(term.motive, amount, cutoff), shift(term.zeroCase, amount, cutoff), shift(term.succCase, amount, cutoff), shift(term.scrutinee, amount, cutoff));
+    case 'Prod': return prod(shift(term.left, amount, cutoff), shift(term.right, amount, cutoff));
+    case 'Pair': return pair(shift(term.left, amount, cutoff), shift(term.right, amount, cutoff), shift(term.leftType, amount, cutoff), shift(term.rightType, amount, cutoff));
+    case 'Fst': return fst(shift(term.pair, amount, cutoff));
+    case 'Snd': return snd(shift(term.pair, amount, cutoff));
     case 'Eq': return { ...term, type: shift(term.type, amount, cutoff), left: shift(term.left, amount, cutoff), right: shift(term.right, amount, cutoff) };
     case 'Refl': return { ...term, type: shift(term.type, amount, cutoff), value: shift(term.value, amount, cutoff) };
     case 'EqRec': return { ...term, motive: shift(term.motive, amount, cutoff), reflCase: shift(term.reflCase, amount, cutoff), left: shift(term.left, amount, cutoff), right: shift(term.right, amount, cutoff), equality: shift(term.equality, amount, cutoff) };
@@ -22,11 +27,16 @@ export function substitute(body: Term, replacement: Term, depth = 0): Term {
       if (body.index > depth) return { ...body, index: body.index - 1 };
       return body;
     case 'Type': case 'Nat': case 'Zero': return body;
+    case 'Axiom': return { ...body, type: substitute(body.type, replacement, depth) };
     case 'Pi': return { ...body, domain: substitute(body.domain, replacement, depth), body: substitute(body.body, replacement, depth + 1) };
     case 'Lambda': return { ...body, domain: substitute(body.domain, replacement, depth), body: substitute(body.body, replacement, depth + 1) };
     case 'App': return app(substitute(body.fn, replacement, depth), substitute(body.arg, replacement, depth));
     case 'Succ': return succ(substitute(body.value, replacement, depth));
     case 'NatRec': return natRec(substitute(body.motive, replacement, depth), substitute(body.zeroCase, replacement, depth), substitute(body.succCase, replacement, depth), substitute(body.scrutinee, replacement, depth));
+    case 'Prod': return prod(substitute(body.left, replacement, depth), substitute(body.right, replacement, depth));
+    case 'Pair': return pair(substitute(body.left, replacement, depth), substitute(body.right, replacement, depth), substitute(body.leftType, replacement, depth), substitute(body.rightType, replacement, depth));
+    case 'Fst': return fst(substitute(body.pair, replacement, depth));
+    case 'Snd': return snd(substitute(body.pair, replacement, depth));
     case 'Eq': return { ...body, type: substitute(body.type, replacement, depth), left: substitute(body.left, replacement, depth), right: substitute(body.right, replacement, depth) };
     case 'Refl': return { ...body, type: substitute(body.type, replacement, depth), value: substitute(body.value, replacement, depth) };
     case 'EqRec': return { ...body, motive: substitute(body.motive, replacement, depth), reflCase: substitute(body.reflCase, replacement, depth), left: substitute(body.left, replacement, depth), right: substitute(body.right, replacement, depth), equality: substitute(body.equality, replacement, depth) };
@@ -35,6 +45,8 @@ export function substitute(body: Term, replacement: Term, depth = 0): Term {
 
 export function whnf(term: Term): Term {
   while (true) {
+    if (term.kind === 'Fst' && term.pair.kind === 'Pair') { term = term.pair.left; continue; }
+    if (term.kind === 'Snd' && term.pair.kind === 'Pair') { term = term.pair.right; continue; }
     if (term.kind === 'App' && term.fn.kind === 'Lambda') {
       term = substitute(term.fn.body, term.arg);
       continue;
@@ -64,6 +76,7 @@ export function normalize(term: Term): Term {
   }
   switch (reduced.kind) {
     case 'Type': case 'Nat': case 'Zero': case 'Var': return reduced;
+    case 'Axiom': return { ...reduced, type: normalize(reduced.type) };
     case 'Pi': return { ...reduced, domain: normalize(reduced.domain), body: normalize(reduced.body) };
     case 'Lambda': return { ...reduced, domain: normalize(reduced.domain), body: normalize(reduced.body) };
     case 'App': {
@@ -78,6 +91,10 @@ export function normalize(term: Term): Term {
       if (reduced.scrutinee.kind === 'Succ') return normalize(app(app(reduced.succCase, reduced.scrutinee.value), natRec(reduced.motive, reduced.zeroCase, reduced.succCase, reduced.scrutinee.value)));
       return { ...reduced, motive: normalize(reduced.motive), zeroCase: normalize(reduced.zeroCase), succCase: normalize(reduced.succCase), scrutinee: normalize(reduced.scrutinee) };
     }
+    case 'Prod': return { ...reduced, left: normalize(reduced.left), right: normalize(reduced.right) };
+    case 'Pair': return { ...reduced, left: normalize(reduced.left), right: normalize(reduced.right), leftType: normalize(reduced.leftType), rightType: normalize(reduced.rightType) };
+    case 'Fst': { const p = normalize(reduced.pair); return p.kind === 'Pair' ? normalize(p.left) : fst(p); }
+    case 'Snd': { const p = normalize(reduced.pair); return p.kind === 'Pair' ? normalize(p.right) : snd(p); }
     case 'Eq': return { ...reduced, type: normalize(reduced.type), left: normalize(reduced.left), right: normalize(reduced.right) };
     case 'Refl': return { ...reduced, type: normalize(reduced.type), value: normalize(reduced.value) };
     case 'EqRec': return reduced.equality.kind === 'Refl' ? normalize(reduced.reflCase) : reduced;
@@ -92,6 +109,7 @@ export function structuralEqual(left: Term, right: Term): boolean {
   if (left.kind !== right.kind) return false;
   switch (left.kind) {
     case 'Type': case 'Nat': case 'Zero': return true;
+    case 'Axiom': { const r = right as typeof left; return left.name === r.name && structuralEqual(left.type, r.type); }
     case 'Var': return left.index === (right as typeof left).index;
     case 'Pi': case 'Lambda': {
       const r = right as typeof left;
@@ -100,6 +118,10 @@ export function structuralEqual(left: Term, right: Term): boolean {
     case 'App': { const r = right as typeof left; return structuralEqual(left.fn, r.fn) && structuralEqual(left.arg, r.arg); }
     case 'Succ': return structuralEqual(left.value, (right as typeof left).value);
     case 'NatRec': { const r = right as typeof left; return structuralEqual(left.motive, r.motive) && structuralEqual(left.zeroCase, r.zeroCase) && structuralEqual(left.succCase, r.succCase) && structuralEqual(left.scrutinee, r.scrutinee); }
+    case 'Prod': { const r = right as typeof left; return structuralEqual(left.left, r.left) && structuralEqual(left.right, r.right); }
+    case 'Pair': { const r = right as typeof left; return structuralEqual(left.left, r.left) && structuralEqual(left.right, r.right) && structuralEqual(left.leftType, r.leftType) && structuralEqual(left.rightType, r.rightType); }
+    case 'Fst': return structuralEqual(left.pair, (right as typeof left).pair);
+    case 'Snd': return structuralEqual(left.pair, (right as typeof left).pair);
     case 'Eq': { const r = right as typeof left; return structuralEqual(left.type, r.type) && structuralEqual(left.left, r.left) && structuralEqual(left.right, r.right); }
     case 'Refl': { const r = right as typeof left; return structuralEqual(left.type, r.type) && structuralEqual(left.value, r.value); }
     case 'EqRec': { const r = right as typeof left; return structuralEqual(left.motive, r.motive) && structuralEqual(left.reflCase, r.reflCase) && structuralEqual(left.left, r.left) && structuralEqual(left.right, r.right) && structuralEqual(left.equality, r.equality); }

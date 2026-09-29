@@ -29,6 +29,11 @@ test('add_succ uses Nat.rec and Eq.rec in the successor case', () => {
     if (term.kind === 'EqRec') return true;
     switch (term.kind) {
       case 'Type': case 'Nat': case 'Zero': case 'Var': return false;
+      case 'Axiom': return containsEqRec(term.type);
+      case 'Prod': return containsEqRec(term.left) || containsEqRec(term.right);
+      case 'Pair': return containsEqRec(term.left) || containsEqRec(term.right) || containsEqRec(term.leftType) || containsEqRec(term.rightType);
+      case 'Fst': return containsEqRec(term.pair);
+      case 'Snd': return containsEqRec(term.pair);
       case 'Pi': case 'Lambda': return containsEqRec(term.domain) || containsEqRec(term.body);
       case 'App': return containsEqRec(term.fn) || containsEqRec(term.arg);
       case 'Succ': return containsEqRec(term.value);

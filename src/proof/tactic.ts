@@ -27,6 +27,7 @@ function abstractEqualityTarget(term: Term, pattern: Term, depth = 0): { readonl
   if (definitionalEqual(term, pattern)) return { term: variable(depth), found: true };
   switch (term.kind) {
     case 'Type': case 'Nat': case 'Zero': case 'Var': return { term, found: false };
+    case 'Axiom': { const type = abstractEqualityTarget(term.type, pattern, depth); return { term: { ...term, type: type.term }, found: type.found }; }
     case 'Pi': {
       const domain = abstractEqualityTarget(term.domain, pattern, depth);
       const body = abstractEqualityTarget(term.body, shift(pattern, 1), depth + 1);
@@ -46,6 +47,10 @@ function abstractEqualityTarget(term: Term, pattern: Term, depth = 0): { readonl
       const value = abstractEqualityTarget(term.value, pattern, depth);
       return { term: { ...term, value: value.term }, found: value.found };
     }
+    case 'Prod': { const left = abstractEqualityTarget(term.left, pattern, depth); const right = abstractEqualityTarget(term.right, pattern, depth); return { term: { ...term, left: left.term, right: right.term }, found: left.found || right.found }; }
+    case 'Pair': { const left = abstractEqualityTarget(term.left, pattern, depth); const right = abstractEqualityTarget(term.right, pattern, depth); const leftType = abstractEqualityTarget(term.leftType, pattern, depth); const rightType = abstractEqualityTarget(term.rightType, pattern, depth); return { term: { ...term, left: left.term, right: right.term, leftType: leftType.term, rightType: rightType.term }, found: left.found || right.found || leftType.found || rightType.found }; }
+    case 'Fst': { const pair = abstractEqualityTarget(term.pair, pattern, depth); return { term: { ...term, pair: pair.term }, found: pair.found }; }
+    case 'Snd': { const pair = abstractEqualityTarget(term.pair, pattern, depth); return { term: { ...term, pair: pair.term }, found: pair.found }; }
     case 'NatRec': {
       const motive = abstractEqualityTarget(term.motive, pattern, depth);
       const zeroCase = abstractEqualityTarget(term.zeroCase, pattern, depth);
@@ -106,6 +111,11 @@ function abstractInductionVariable(term: Term, targetIndex: number, depth = 0): 
   switch (term.kind) {
     case 'Var': return term.index === targetIndex + depth ? variable(depth, term.name) : term;
     case 'Type': case 'Nat': case 'Zero': return term;
+    case 'Axiom': return { ...term, type: abstractInductionVariable(term.type, targetIndex, depth) };
+    case 'Prod': return { ...term, left: abstractInductionVariable(term.left, targetIndex, depth), right: abstractInductionVariable(term.right, targetIndex, depth) };
+    case 'Pair': return { ...term, left: abstractInductionVariable(term.left, targetIndex, depth), right: abstractInductionVariable(term.right, targetIndex, depth), leftType: abstractInductionVariable(term.leftType, targetIndex, depth), rightType: abstractInductionVariable(term.rightType, targetIndex, depth) };
+    case 'Fst': return { ...term, pair: abstractInductionVariable(term.pair, targetIndex, depth) };
+    case 'Snd': return { ...term, pair: abstractInductionVariable(term.pair, targetIndex, depth) };
     case 'Pi': return { ...term, domain: abstractInductionVariable(term.domain, targetIndex, depth), body: abstractInductionVariable(term.body, targetIndex, depth + 1) };
     case 'Lambda': return { ...term, domain: abstractInductionVariable(term.domain, targetIndex, depth), body: abstractInductionVariable(term.body, targetIndex, depth + 1) };
     case 'App': return app(abstractInductionVariable(term.fn, targetIndex, depth), abstractInductionVariable(term.arg, targetIndex, depth));

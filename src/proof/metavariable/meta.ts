@@ -72,6 +72,13 @@ function validateAssignmentScope(variable: MetaVariable, value: MetaTerm, contex
 function validateTermScope(term: Term, scopeDepth: number, binderDepth = 0): void {
   switch (term.kind) {
     case 'Type': case 'Nat': case 'Zero': return;
+    case 'Axiom': validateTermScope(term.type, scopeDepth, binderDepth); return;
+    case 'Prod': validateTermScope(term.left, scopeDepth, binderDepth); validateTermScope(term.right, scopeDepth, binderDepth); return;
+    case 'Pair':
+      validateTermScope(term.left, scopeDepth, binderDepth); validateTermScope(term.right, scopeDepth, binderDepth);
+      validateTermScope(term.leftType, scopeDepth, binderDepth); validateTermScope(term.rightType, scopeDepth, binderDepth); return;
+    case 'Fst': validateTermScope(term.pair, scopeDepth, binderDepth); return;
+    case 'Snd': validateTermScope(term.pair, scopeDepth, binderDepth); return;
     case 'Var':
       if (term.index >= scopeDepth + binderDepth) throw new MetaVariableError(`Scope escape: variable #${term.index} is outside scope depth ${scopeDepth}`);
       return;

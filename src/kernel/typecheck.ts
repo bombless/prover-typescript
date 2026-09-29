@@ -1,4 +1,4 @@
-import { Term, Type, Nat, Zero, variable, pi, lambda, app, succ, natRec, eq, refl, eqRec } from '../syntax/ast';
+import { Term, Type, Nat, Zero, variable, pi, lambda, app, succ, natRec, prod, pair, fst, snd, eq, refl, eqRec } from '../syntax/ast';
 import { definitionalEqual, substitute, shift, whnf } from './reduction';
 
 export type Context = readonly Term[];
@@ -12,6 +12,7 @@ function fail(message: string): never { throw new TypeError(message); }
 export function infer(ctx: Context, term: Term): Term {
   switch (term.kind) {
     case 'Type': return Type;
+    case 'Axiom': { check(ctx, term.type, Type); return term.type; }
     case 'Nat': return Type;
     case 'Zero': return Nat;
     case 'Var': {
@@ -57,6 +58,10 @@ export function infer(ctx: Context, term: Term): Term {
       check(ctx, term.scrutinee, Nat);
       return app(term.motive, term.scrutinee);
     }
+    case 'Prod': { check(ctx, term.left, Type); check(ctx, term.right, Type); return Type; }
+    case 'Pair': { check(ctx, term.left, term.leftType); check(ctx, term.right, term.rightType); return prod(term.leftType, term.rightType); }
+    case 'Fst': { const pairType = whnf(infer(ctx, term.pair)); if (pairType.kind !== 'Prod') fail(`Expected a product, found ${show(pairType)}`); return pairType.left; }
+    case 'Snd': { const pairType = whnf(infer(ctx, term.pair)); if (pairType.kind !== 'Prod') fail(`Expected a product, found ${show(pairType)}`); return pairType.right; }
     case 'Eq': {
       check(ctx, term.type, Type);
       check(ctx, term.left, term.type);
@@ -107,6 +112,7 @@ export function inferLambdaApplication(lambdaTerm: Term, arg: Term): Term {
 export function show(term: Term): string {
   switch (term.kind) {
     case 'Type': return 'Type';
+    case 'Axiom': return term.name;
     case 'Nat': return 'Nat';
     case 'Zero': return '0';
     case 'Var': return term.name ?? `#${term.index}`;
@@ -115,10 +121,14 @@ export function show(term: Term): string {
     case 'App': return `(${show(term.fn)} ${show(term.arg)})`;
     case 'Succ': return `(Succ ${show(term.value)})`;
     case 'NatRec': return `(Nat.rec ${show(term.motive)} ${show(term.zeroCase)} ${show(term.succCase)} ${show(term.scrutinee)})`;
+    case 'Prod': return `(${show(term.left)} × ${show(term.right)})`;
+    case 'Pair': return `(${show(term.left)}, ${show(term.right)})`;
+    case 'Fst': return `(fst ${show(term.pair)})`;
+    case 'Snd': return `(snd ${show(term.pair)})`;
     case 'Eq': return `Eq ${show(term.type)} ${show(term.left)} ${show(term.right)}`;
     case 'Refl': return `refl ${show(term.value)}`;
     case 'EqRec': return `(Eq.rec ...)`;
   }
 }
 
-export { variable, pi, lambda, app, succ, natRec, eq, refl, eqRec };
+export { variable, pi, lambda, app, succ, natRec, prod, pair, fst, snd, eq, refl, eqRec };

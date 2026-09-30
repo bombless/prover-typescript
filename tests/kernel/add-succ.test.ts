@@ -28,13 +28,17 @@ test('add_succ uses Nat.rec and Eq.rec in the successor case', () => {
   const containsEqRec = (term: import('../../src/syntax/ast').Term): boolean => {
     if (term.kind === 'EqRec') return true;
     switch (term.kind) {
-      case 'Type': case 'Nat': case 'Zero': case 'Var': return false;
+      case 'Type': case 'Nat': case 'Bool': case 'Empty': case 'Zero': case 'True': case 'False': case 'Var': return false;
       case 'Pi': case 'Lambda': return containsEqRec(term.domain) || containsEqRec(term.body);
       case 'App': return containsEqRec(term.fn) || containsEqRec(term.arg);
       case 'Succ': return containsEqRec(term.value);
       case 'NatRec': return containsEqRec(term.motive) || containsEqRec(term.zeroCase) || containsEqRec(term.succCase) || containsEqRec(term.scrutinee);
       case 'Eq': return containsEqRec(term.type) || containsEqRec(term.left) || containsEqRec(term.right);
       case 'Refl': return containsEqRec(term.type) || containsEqRec(term.value);
+      case 'BoolRec': return containsEqRec(term.motive) || containsEqRec(term.trueCase) || containsEqRec(term.falseCase) || containsEqRec(term.scrutinee);
+      case 'EmptyRec': return containsEqRec(term.motive) || containsEqRec(term.scrutinee);
+      case 'Prod': case 'Pair': return containsEqRec(term.left) || containsEqRec(term.right);
+      case 'Fst': case 'Snd': return containsEqRec(term.pair);
     }
   };
 

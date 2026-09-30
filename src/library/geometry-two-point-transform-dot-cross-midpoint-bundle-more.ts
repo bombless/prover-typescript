@@ -1,0 +1,35 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { rotate90 } from './geometry-rotations';
+import { translate } from './geometry-transform';
+import { normSq, dot2 } from './geometry-metrics';
+import { cross2 } from './geometry-cross';
+import { midpoint } from './geometry-segment';
+import { onCircle } from './geometry-circle';
+import { incidence } from './geometry-incidence';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+const transform = (p: Term): Term => app(app(translate, app(rotate90, p)), pair(numeral(1), numeral(1)));
+const p = transform(pair(numeral(2), numeral(3)));
+const q = transform(pair(numeral(1), numeral(4)));
+const m = app(app(midpoint, p), q);
+const line = pair(pair(numeral(4), numeral(0)), pair(numeral(1), numeral(0)));
+
+export const pType: Term = eq(Point2, p, pair(numeral(4), numeral(3)));
+export const pProof: Term = refl(Point2, pair(numeral(4), numeral(3)));
+export const qType: Term = eq(Point2, q, pair(numeral(5), numeral(2)));
+export const qProof: Term = refl(Point2, pair(numeral(5), numeral(2)));
+export const pNormType: Term = eq(Nat, app(normSq, p), numeral(25));
+export const pNormProof: Term = refl(Nat, numeral(25));
+export const qNormType: Term = eq(Nat, app(normSq, q), numeral(29));
+export const qNormProof: Term = refl(Nat, numeral(29));
+export const dotType: Term = eq(Nat, app(app(dot2, p), q), numeral(26));
+export const dotProof: Term = refl(Nat, numeral(26));
+export const crossType: Term = eq(Nat, app(app(cross2, p), q), numeral(23));
+export const crossProof: Term = refl(Nat, numeral(23));
+export const midpointType: Term = eq(Point2, m, pair(numeral(4), numeral(2)));
+export const midpointProof: Term = refl(Point2, pair(numeral(4), numeral(2)));
+export const midpointCircleType: Term = app(app(onCircle, m), pair(m, numeral(20)));
+export const midpointCircleProof: Term = refl(Nat, numeral(20));
+export const pIncidenceType: Term = app(app(incidence, p), line);
+export const pIncidenceProof: Term = refl(Nat, numeral(4));

@@ -5,6 +5,10 @@ export type SurfaceTerm =
   | SurfaceLambda
   | SurfaceApp
   | SurfaceNat
+  | SurfaceBool
+  | SurfaceEmpty
+  | SurfaceTrue
+  | SurfaceFalse
   | SurfaceZero
   | SurfaceSucc
   | SurfaceNatRec
@@ -44,6 +48,10 @@ export interface SurfaceApp {
 export interface SurfaceNat {
   readonly kind: 'Nat';
 }
+export interface SurfaceBool { readonly kind: 'Bool'; }
+export interface SurfaceEmpty { readonly kind: 'Empty'; }
+export interface SurfaceTrue { readonly kind: 'True'; }
+export interface SurfaceFalse { readonly kind: 'False'; }
 
 export interface SurfaceZero {
   readonly kind: 'Zero';
@@ -86,6 +94,10 @@ export interface SurfaceEqRec {
 
 export const surfaceSort: SurfaceSort = { kind: 'Sort' };
 export const surfaceNat: SurfaceNat = { kind: 'Nat' };
+export const surfaceBool: SurfaceBool = { kind: 'Bool' };
+export const surfaceEmpty: SurfaceEmpty = { kind: 'Empty' };
+export const surfaceTrue: SurfaceTrue = { kind: 'True' };
+export const surfaceFalse: SurfaceFalse = { kind: 'False' };
 export const surfaceZero: SurfaceZero = { kind: 'Zero' };
 
 export function surfaceVar(name: string): SurfaceVar {

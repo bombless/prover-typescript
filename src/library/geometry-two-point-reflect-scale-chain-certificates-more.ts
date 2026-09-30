@@ -1,0 +1,34 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { scaleVec } from './geometry-scalar';
+import { reflectX } from './geometry-reflections';
+import { translate } from './geometry-transform';
+import { distanceSq } from './geometry-distance';
+import { midpoint } from './geometry-segment';
+import { normSq } from './geometry-metrics';
+import { onCircle } from './geometry-circle';
+import { incidence } from './geometry-incidence';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+const p = pair(numeral(2), numeral(3));
+const q = pair(numeral(4), numeral(1));
+const transform = (x: Term): Term => app(app(translate, app(reflectX, app(app(scaleVec, numeral(3)), x))), pair(numeral(1), numeral(2)));
+const tp = transform(p);
+const tq = transform(q);
+const m = app(app(midpoint, tp), tq);
+const line = pair(pair(numeral(7), numeral(0)), pair(numeral(1), numeral(0)));
+
+export const transformedPType: Term = eq(Point2, tp, pair(numeral(7), numeral(11)));
+export const transformedPProof: Term = refl(Point2, pair(numeral(7), numeral(11)));
+export const transformedQType: Term = eq(Point2, tq, pair(numeral(13), numeral(5)));
+export const transformedQProof: Term = refl(Point2, pair(numeral(13), numeral(5)));
+export const transformedDistanceType: Term = eq(Nat, app(app(distanceSq, tp), tq), numeral(146));
+export const transformedDistanceProof: Term = refl(Nat, numeral(146));
+export const transformedMidpointType: Term = eq(Point2, m, pair(numeral(7), numeral(5)));
+export const transformedMidpointProof: Term = refl(Point2, pair(numeral(7), numeral(5)));
+export const transformedMidpointNormType: Term = eq(Nat, app(normSq, m), numeral(74));
+export const transformedMidpointNormProof: Term = refl(Nat, numeral(74));
+export const transformedMidpointCircleType: Term = app(app(onCircle, m), pair(m, numeral(74)));
+export const transformedMidpointCircleProof: Term = refl(Nat, numeral(74));
+export const transformedMidpointIncidenceType: Term = app(app(incidence, m), line);
+export const transformedMidpointIncidenceProof: Term = refl(Nat, numeral(7));

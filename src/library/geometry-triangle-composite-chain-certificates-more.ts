@@ -1,0 +1,38 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { scaleVec } from './geometry-scalar';
+import { rotate90 } from './geometry-rotations';
+import { translate } from './geometry-transform';
+import { distanceSq } from './geometry-distance';
+import { midpoint } from './geometry-segment';
+import { normSq } from './geometry-metrics';
+import { onCircle } from './geometry-circle';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+const a = pair(numeral(1), numeral(2));
+const b = pair(numeral(3), numeral(4));
+const c = pair(numeral(5), numeral(6));
+const transform = (p: Term): Term => app(app(translate, app(rotate90, app(app(scaleVec, numeral(2)), p))), pair(numeral(1), numeral(1)));
+const ta = transform(a);
+const tb = transform(b);
+const tc = transform(c);
+const tm = app(app(midpoint, ta), tb);
+
+export const transformedAType: Term = eq(Point2, ta, pair(numeral(5), numeral(3)));
+export const transformedAProof: Term = refl(Point2, pair(numeral(5), numeral(3)));
+export const transformedBType: Term = eq(Point2, tb, pair(numeral(9), numeral(7)));
+export const transformedBProof: Term = refl(Point2, pair(numeral(9), numeral(7)));
+export const transformedCType: Term = eq(Point2, tc, pair(numeral(13), numeral(11)));
+export const transformedCProof: Term = refl(Point2, pair(numeral(13), numeral(11)));
+export const edgeABType: Term = eq(Nat, app(app(distanceSq, ta), tb), numeral(66));
+export const edgeABProof: Term = refl(Nat, numeral(66));
+export const edgeBCType: Term = eq(Nat, app(app(distanceSq, tb), tc), numeral(194));
+export const edgeBCProof: Term = refl(Nat, numeral(194));
+export const edgeCAType: Term = eq(Nat, app(app(distanceSq, tc), ta), numeral(98));
+export const edgeCAProof: Term = refl(Nat, numeral(98));
+export const midpointType: Term = eq(Point2, tm, pair(numeral(5), numeral(7)));
+export const midpointProof: Term = refl(Point2, pair(numeral(5), numeral(7)));
+export const midpointNormType: Term = eq(Nat, app(normSq, tm), numeral(74));
+export const midpointNormProof: Term = refl(Nat, numeral(74));
+export const midpointCircleType: Term = app(app(onCircle, tm), pair(tm, numeral(74)));
+export const midpointCircleProof: Term = refl(Nat, numeral(74));

@@ -1,0 +1,31 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { rotate90 } from './geometry-rotations';
+import { reflectX } from './geometry-reflections';
+import { normSq, dot2 } from './geometry-metrics';
+import { cross2 } from './geometry-cross';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+export const Triangle2: Term = prod(Point2, prod(Point2, Point2));
+const a = pair(numeral(2), numeral(3));
+const b = pair(numeral(1), numeral(4));
+const c = pair(numeral(5), numeral(2));
+const t = pair(a, pair(b, c));
+const ra = app(rotate90, a);
+const rb = app(rotate90, b);
+const rc = app(rotate90, c);
+
+export const rotatedAVertexType: Term = eq(Point2, ra, pair(numeral(3), numeral(2)));
+export const rotatedAVertexProof: Term = refl(Point2, pair(numeral(3), numeral(2)));
+export const rotatedBVertexType: Term = eq(Point2, rb, pair(numeral(4), numeral(1)));
+export const rotatedBVertexProof: Term = refl(Point2, pair(numeral(4), numeral(1)));
+export const rotatedCVertexType: Term = eq(Point2, rc, pair(numeral(2), numeral(5)));
+export const rotatedCVertexProof: Term = refl(Point2, pair(numeral(2), numeral(5)));
+export const rotatedANormType: Term = eq(Nat, app(normSq, ra), numeral(13));
+export const rotatedANormProof: Term = refl(Nat, numeral(13));
+export const rotatedDotType: Term = eq(Nat, app(app(dot2, ra), rb), numeral(14));
+export const rotatedDotProof: Term = refl(Nat, numeral(14));
+export const rotatedCrossType: Term = eq(Nat, app(app(cross2, ra), rb), numeral(11));
+export const rotatedCrossProof: Term = refl(Nat, numeral(11));
+export const reflectedCNormType: Term = eq(Nat, app(normSq, app(reflectX, c)), numeral(29));
+export const reflectedCNormProof: Term = refl(Nat, numeral(29));

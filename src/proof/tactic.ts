@@ -1,6 +1,6 @@
 import { check, infer, show } from '../kernel/typecheck';
 import { definitionalEqual, normalize, shift, whnf } from '../kernel/reduction';
-import { Term, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
+import { Term, Nat, Bool, Zero, True, False, app, boolRec, eqRec, lambda, natRec, pair, prod, refl, succ, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
 import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
@@ -14,8 +14,11 @@ type ProofNode =
   | { readonly kind: 'term'; readonly term: Term; readonly depth: number }
   | { readonly kind: 'lambda'; readonly domain: Term; readonly name?: string; readonly body: ProofNode }
   | { readonly kind: 'app'; readonly fn: ProofNode; readonly arg: ProofNode }
+  | { readonly kind: 'pair'; readonly left: ProofNode; readonly right: ProofNode }
   | { readonly kind: 'eqRec'; readonly motive: Term; readonly left: Term; readonly right: Term; readonly equality: Term; readonly reflCase: ProofNode }
-  | { readonly kind: 'natRec'; readonly motive: Term; readonly scrutinee: Term; readonly zeroCase: ProofNode; readonly succCase: ProofNode };
+  | { readonly kind: 'natRec'; readonly motive: Term; readonly scrutinee: Term; readonly zeroCase: ProofNode; readonly succCase: ProofNode }
+  | { readonly kind: 'boolRec'; readonly motive: Term; readonly trueCase: ProofNode; readonly falseCase: ProofNode; readonly scrutinee: Term }
+  | { readonly kind: 'succ'; readonly value: ProofNode };
 
 interface Hole { readonly id: GoalId; readonly goal: Goal; readonly depth: number; }
 
@@ -46,6 +49,24 @@ function abstractEqualityTarget(term: Term, pattern: Term, depth = 0): { readonl
       const value = abstractEqualityTarget(term.value, pattern, depth);
       return { term: { ...term, value: value.term }, found: value.found };
     }
+    case 'Prod': {
+      const left = abstractEqualityTarget(term.left, pattern, depth);
+      const right = abstractEqualityTarget(term.right, pattern, depth);
+      return { term: { ...term, left: left.term, right: right.term }, found: left.found || right.found };
+    }
+    case 'Pair': {
+      const left = abstractEqualityTarget(term.left, pattern, depth);
+      const right = abstractEqualityTarget(term.right, pattern, depth);
+      return { term: { ...term, left: left.term, right: right.term }, found: left.found || right.found };
+    }
+    case 'Fst': {
+      const value = abstractEqualityTarget(term.pair, pattern, depth);
+      return { term: { ...term, pair: value.term }, found: value.found };
+    }
+    case 'Snd': {
+      const value = abstractEqualityTarget(term.pair, pattern, depth);
+      return { term: { ...term, pair: value.term }, found: value.found };
+    }
     case 'NatRec': {
       const motive = abstractEqualityTarget(term.motive, pattern, depth);
       const zeroCase = abstractEqualityTarget(term.zeroCase, pattern, depth);
@@ -73,6 +94,7 @@ function abstractEqualityTarget(term: Term, pattern: Term, depth = 0): { readonl
       return { term: { ...term, motive: motive.term, reflCase: reflCase.term, left: left.term, right: right.term, equality: equality.term }, found: motive.found || reflCase.found || left.found || right.found || equality.found };
     }
   }
+  throw new TacticError('Unsupported term in equality abstraction');
 }
 
 function replaceNode(root: ProofNode, id: GoalId, replacement: ProofNode): ProofNode {
@@ -81,6 +103,9 @@ function replaceNode(root: ProofNode, id: GoalId, replacement: ProofNode): Proof
   if (root.kind === 'lambda') return { ...root, body: replaceNode(root.body, id, replacement) };
   if (root.kind === 'app') return { kind: 'app', fn: replaceNode(root.fn, id, replacement), arg: replaceNode(root.arg, id, replacement) };
   if (root.kind === 'eqRec') return { ...root, reflCase: replaceNode(root.reflCase, id, replacement) };
+  if (root.kind === 'pair') return { ...root, left: replaceNode(root.left, id, replacement), right: replaceNode(root.right, id, replacement) };
+  if (root.kind === 'boolRec') return { ...root, trueCase: replaceNode(root.trueCase, id, replacement), falseCase: replaceNode(root.falseCase, id, replacement) };
+  if (root.kind === 'succ') return { ...root, value: replaceNode(root.value, id, replacement) };
   return { ...root, zeroCase: replaceNode(root.zeroCase, id, replacement), succCase: replaceNode(root.succCase, id, replacement) };
 }
 
@@ -90,7 +115,10 @@ function compile(root: ProofNode, depth = 0): Term {
     case 'term': return shift(root.term, depth - root.depth);
     case 'lambda': return lambda(root.domain, compile(root.body, depth + 1), root.name);
     case 'app': return app(compile(root.fn, depth), compile(root.arg, depth));
+    case 'pair': return { kind: 'Pair', left: compile(root.left, depth), right: compile(root.right, depth) };
     case 'eqRec': return eqRec(root.motive, compile(root.reflCase, depth), root.left, root.right, root.equality);
+    case 'succ': return succ(compile(root.value, depth));
+    case 'boolRec': return boolRec(root.motive, compile(root.trueCase, depth), compile(root.falseCase, depth), root.scrutinee);
     case 'natRec': {
       const successorCase = lambda(
         Nat,
@@ -105,7 +133,11 @@ function compile(root: ProofNode, depth = 0): Term {
 function abstractInductionVariable(term: Term, targetIndex: number, depth = 0): Term {
   switch (term.kind) {
     case 'Var': return term.index === targetIndex + depth ? variable(depth, term.name) : term;
-    case 'Type': case 'Nat': case 'Zero': return term;
+    case 'Type': case 'Nat': case 'Bool': case 'Empty': case 'Zero': case 'True': case 'False': return term;
+    case 'Prod': return { ...term, left: abstractInductionVariable(term.left, targetIndex, depth), right: abstractInductionVariable(term.right, targetIndex, depth) };
+    case 'Pair': return { ...term, left: abstractInductionVariable(term.left, targetIndex, depth), right: abstractInductionVariable(term.right, targetIndex, depth) };
+    case 'Fst': return { ...term, pair: abstractInductionVariable(term.pair, targetIndex, depth) };
+    case 'Snd': return { ...term, pair: abstractInductionVariable(term.pair, targetIndex, depth) };
     case 'Pi': return { ...term, domain: abstractInductionVariable(term.domain, targetIndex, depth), body: abstractInductionVariable(term.body, targetIndex, depth + 1) };
     case 'Lambda': return { ...term, domain: abstractInductionVariable(term.domain, targetIndex, depth), body: abstractInductionVariable(term.body, targetIndex, depth + 1) };
     case 'App': return app(abstractInductionVariable(term.fn, targetIndex, depth), abstractInductionVariable(term.arg, targetIndex, depth));
@@ -115,6 +147,7 @@ function abstractInductionVariable(term: Term, targetIndex: number, depth = 0): 
     case 'Refl': return { ...term, type: abstractInductionVariable(term.type, targetIndex, depth), value: abstractInductionVariable(term.value, targetIndex, depth) };
     case 'EqRec': return { ...term, motive: abstractInductionVariable(term.motive, targetIndex, depth), reflCase: abstractInductionVariable(term.reflCase, targetIndex, depth), left: abstractInductionVariable(term.left, targetIndex, depth), right: abstractInductionVariable(term.right, targetIndex, depth), equality: abstractInductionVariable(term.equality, targetIndex, depth) };
   }
+  throw new TacticError('Unsupported term in induction abstraction');
 }
 
 export class TacticSession {
@@ -334,6 +367,62 @@ export class TacticSession {
     let node: ProofNode = { kind: 'term', term, depth: hole.depth };
     for (const argumentNode of argumentNodes) node = { kind: 'app', fn: node, arg: argumentNode };
     return this.withReplacement(hole.id, childHoles, replaceNode(this.root, hole.id, node));
+  }
+
+  constructorPair(): TacticSession {
+    const hole = this.firstHole();
+    const target = whnf(hole.goal.type);
+    if (target.kind !== 'Prod') throw new TacticError('constructorPair expected a product goal, found ' + show(target));
+    const leftGoal = goal(hole.goal.context, target.left, hole.goal.caseName);
+    const rightGoal = goal(hole.goal.context, target.right, hole.goal.caseName);
+    const left: Hole = { id: leftGoal.id!, goal: leftGoal, depth: hole.depth };
+    const right: Hole = { id: rightGoal.id!, goal: rightGoal, depth: hole.depth };
+    const root = replaceNode(this.root, hole.id, { kind: 'pair', left: { kind: 'hole', id: left.id }, right: { kind: 'hole', id: right.id } });
+    return this.withReplacement(hole.id, [left, right], root);
+  }
+
+  constructorSucc(): TacticSession {
+    const hole = this.firstHole();
+    if (!definitionalEqual(whnf(hole.goal.type), Nat)) throw new TacticError('constructorSucc expected Nat goal');
+    const childGoal = goal(hole.goal.context, Nat, hole.goal.caseName);
+    const child: Hole = { id: childGoal.id!, goal: childGoal, depth: hole.depth };
+    const root = replaceNode(this.root, hole.id, { kind: 'succ', value: { kind: 'hole', id: child.id } });
+    return this.withReplacement(hole.id, [child], root);
+  }
+
+  constructorZero(): TacticSession { return this.exact(Zero); }
+  constructorTrue(): TacticSession { return this.exact(True); }
+  constructorFalse(): TacticSession { return this.exact(False); }
+
+  casesBool(name?: string): TacticSession {
+    const hole = this.firstHole();
+    const index = hole.goal.context.length - 1;
+    const entry = hole.goal.context[index];
+    if (!entry || (name && entry.name !== name) || !definitionalEqual(entry.type, Bool)) throw new TacticError('casesBool requires newest Bool variable');
+    const motive = lambda(Bool, abstractInductionVariable(hole.goal.type, 0), entry.name);
+    const baseContext = hole.goal.context.slice(0, -1);
+    const trueGoal = goal(baseContext, normalize(app(motive, True)), 'true');
+    const falseGoal = goal(baseContext, normalize(app(motive, False)), 'false');
+    const t: Hole = { id: trueGoal.id!, goal: trueGoal, depth: hole.depth };
+    const f: Hole = { id: falseGoal.id!, goal: falseGoal, depth: hole.depth };
+    const root = replaceNode(this.root, hole.id, { kind: 'boolRec', motive, trueCase: { kind: 'hole', id: t.id }, falseCase: { kind: 'hole', id: f.id }, scrutinee: variable(0, entry.name) });
+    return this.withReplacement(hole.id, [t, f], root);
+  }
+
+  casesNat(name?: string): TacticSession {
+    const hole = this.firstHole();
+    const index = hole.goal.context.length - 1;
+    const entry = hole.goal.context[index];
+    if (!entry || (name && entry.name !== name) || !definitionalEqual(entry.type, Nat)) throw new TacticError('casesNat requires newest Nat variable');
+    const motive = lambda(Nat, abstractInductionVariable(hole.goal.type, 0), entry.name);
+    const baseContext = hole.goal.context.slice(0, -1);
+    const baseGoal = goal(baseContext, normalize(app(motive, Zero)), 'zero');
+    const succContext: Context = [...baseContext, { name: entry.name, type: Nat }];
+    const succGoal = goal(succContext, normalize(app(shift(motive, 1), succ(variable(0, entry.name)))), 'successor');
+    const b: Hole = { id: baseGoal.id!, goal: baseGoal, depth: hole.depth };
+    const s: Hole = { id: succGoal.id!, goal: succGoal, depth: hole.depth + 1 };
+    const root = replaceNode(this.root, hole.id, { kind: 'natRec', motive, scrutinee: variable(0, entry.name), zeroCase: { kind: 'hole', id: b.id }, succCase: { kind: 'hole', id: s.id } });
+    return this.withReplacement(hole.id, [b, s], root);
   }
 
   proof(): Term {

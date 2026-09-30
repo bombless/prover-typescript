@@ -1,0 +1,32 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { rotate90 } from './geometry-rotations';
+import { translate } from './geometry-transform';
+import { normSq, dot2 } from './geometry-metrics';
+import { cross2 } from './geometry-cross';
+import { midpoint } from './geometry-segment';
+import { onCircle } from './geometry-circle';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+const transform = (p: Term): Term => app(app(translate, app(rotate90, p)), pair(numeral(1), numeral(2)));
+const a = transform(pair(numeral(1), numeral(1)));
+const b = transform(pair(numeral(2), numeral(3)));
+const c = transform(pair(numeral(4), numeral(2)));
+const m = app(app(midpoint, a), c);
+
+export const aType: Term = eq(Point2, a, pair(numeral(2), numeral(3)));
+export const aProof: Term = refl(Point2, pair(numeral(2), numeral(3)));
+export const bType: Term = eq(Point2, b, pair(numeral(4), numeral(4)));
+export const bProof: Term = refl(Point2, pair(numeral(4), numeral(4)));
+export const cType: Term = eq(Point2, c, pair(numeral(3), numeral(6)));
+export const cProof: Term = refl(Point2, pair(numeral(3), numeral(6)));
+export const aNormType: Term = eq(Nat, app(normSq, a), numeral(13));
+export const aNormProof: Term = refl(Nat, numeral(13));
+export const abDotType: Term = eq(Nat, app(app(dot2, a), b), numeral(20));
+export const abDotProof: Term = refl(Nat, numeral(20));
+export const abCrossType: Term = eq(Nat, app(app(cross2, a), b), numeral(20));
+export const abCrossProof: Term = refl(Nat, numeral(20));
+export const midpointType: Term = eq(Point2, m, pair(numeral(2), numeral(6)));
+export const midpointProof: Term = refl(Point2, pair(numeral(2), numeral(6)));
+export const midpointCircleType: Term = app(app(onCircle, m), pair(m, numeral(40)));
+export const midpointCircleProof: Term = refl(Nat, numeral(40));

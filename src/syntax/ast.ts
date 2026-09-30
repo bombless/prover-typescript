@@ -2,19 +2,33 @@ export type Term =
   | { readonly kind: 'Type' }
   | { readonly kind: 'Var'; readonly index: number; readonly name?: string }
   | { readonly kind: 'Pi'; readonly domain: Term; readonly body: Term; readonly name?: string; readonly implicit?: boolean }
+  | { readonly kind: 'Prod'; readonly left: Term; readonly right: Term }
+  | { readonly kind: 'Pair'; readonly left: Term; readonly right: Term }
+  | { readonly kind: 'Fst'; readonly pair: Term }
+  | { readonly kind: 'Snd'; readonly pair: Term }
   | { readonly kind: 'Lambda'; readonly domain: Term; readonly body: Term; readonly name?: string }
   | { readonly kind: 'App'; readonly fn: Term; readonly arg: Term }
   | { readonly kind: 'Nat' }
+  | { readonly kind: 'Bool' }
+  | { readonly kind: 'Empty' }
+  | { readonly kind: 'EmptyRec'; readonly motive: Term; readonly scrutinee: Term }
   | { readonly kind: 'Zero' }
+  | { readonly kind: 'True' }
+  | { readonly kind: 'False' }
   | { readonly kind: 'Succ'; readonly value: Term }
   | { readonly kind: 'NatRec'; readonly motive: Term; readonly zeroCase: Term; readonly succCase: Term; readonly scrutinee: Term }
+  | { readonly kind: 'BoolRec'; readonly motive: Term; readonly trueCase: Term; readonly falseCase: Term; readonly scrutinee: Term }
   | { readonly kind: 'Eq'; readonly type: Term; readonly left: Term; readonly right: Term }
   | { readonly kind: 'Refl'; readonly type: Term; readonly value: Term }
   | { readonly kind: 'EqRec'; readonly motive: Term; readonly reflCase: Term; readonly left: Term; readonly right: Term; readonly equality: Term };
 
 export const Type: Term = { kind: 'Type' };
 export const Nat: Term = { kind: 'Nat' };
+export const Bool: Term = { kind: 'Bool' };
+export const Empty: Term = { kind: 'Empty' };
 export const Zero: Term = { kind: 'Zero' };
+export const True: Term = { kind: 'True' };
+export const False: Term = { kind: 'False' };
 
 export function variable(index: number, name?: string): Term {
   if (!Number.isInteger(index) || index < 0) throw new Error('Variable index must be a non-negative integer');
@@ -28,6 +42,10 @@ export function pi(domain: Term, body: Term, name?: string): Term {
 export function piImplicit(domain: Term, body: Term, name?: string): Term {
   return { kind: 'Pi', domain, body, name, implicit: true };
 }
+export function prod(left: Term, right: Term): Term { return { kind: 'Prod', left, right }; }
+export function pair(left: Term, right: Term): Term { return { kind: 'Pair', left, right }; }
+export function fst(value: Term): Term { return { kind: 'Fst', pair: value }; }
+export function snd(value: Term): Term { return { kind: 'Snd', pair: value }; }
 
 export function lambda(domain: Term, body: Term, name?: string): Term {
   return { kind: 'Lambda', domain, body, name };
@@ -43,6 +61,12 @@ export function succ(value: Term): Term {
 
 export function natRec(motive: Term, zeroCase: Term, succCase: Term, scrutinee: Term): Term {
   return { kind: 'NatRec', motive, zeroCase, succCase, scrutinee };
+}
+export function boolRec(motive: Term, trueCase: Term, falseCase: Term, scrutinee: Term): Term {
+  return { kind: 'BoolRec', motive, trueCase, falseCase, scrutinee };
+}
+export function emptyRec(motive: Term, scrutinee: Term): Term {
+  return { kind: 'EmptyRec', motive, scrutinee };
 }
 
 export function eq(type: Term, left: Term, right: Term): Term {

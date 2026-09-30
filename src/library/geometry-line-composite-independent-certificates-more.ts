@@ -1,0 +1,32 @@
+import { Term, Nat, prod, pair, app, eq, refl, fst, snd } from '../syntax/ast';
+import { translate } from './geometry-transform';
+import { rotate90 } from './geometry-rotations';
+import { reflectX } from './geometry-reflections';
+import { incidence } from './geometry-incidence';
+import { onVerticalLine } from './geometry-line';
+import { parallelVec } from './geometry-parallel';
+import { perpendicularVec } from './geometry-relations';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+export const Line2: Term = prod(Point2, prod(Nat, Nat));
+const base: Term = pair(numeral(2), numeral(1));
+const direction: Term = pair(numeral(3), { kind: 'Zero' });
+const line: Term = pair(base, direction);
+const displacement: Term = pair(numeral(4), numeral(2));
+const movedBase: Term = app(app(translate, base), displacement);
+
+export const movedBaseType: Term = eq(Point2, movedBase, pair(numeral(6), numeral(3)));
+export const movedBaseProof: Term = refl(Point2, pair(numeral(6), numeral(3)));
+export const rotatedDirectionType: Term = eq(Point2, app(rotate90, direction), pair({ kind: 'Zero' }, numeral(3)));
+export const rotatedDirectionProof: Term = refl(Point2, pair({ kind: 'Zero' }, numeral(3)));
+export const reflectedDirectionType: Term = eq(Point2, app(reflectX, direction), direction);
+export const reflectedDirectionProof: Term = refl(Point2, direction);
+export const movedBaseVerticalType: Term = app(app(onVerticalLine, movedBase), numeral(6));
+export const movedBaseVerticalProof: Term = refl(Nat, numeral(6));
+export const baseIncidenceType: Term = app(app(incidence, base), line);
+export const baseIncidenceProof: Term = refl(Nat, numeral(2));
+export const directionParallelType: Term = app(app(parallelVec, direction), pair(numeral(7), { kind: 'Zero' }));
+export const directionParallelProof: Term = refl(Nat, { kind: 'Zero' });
+export const directionPerpendicularType: Term = app(app(perpendicularVec, direction), pair({ kind: 'Zero' }, numeral(5)));
+export const directionPerpendicularProof: Term = refl(Nat, { kind: 'Zero' });

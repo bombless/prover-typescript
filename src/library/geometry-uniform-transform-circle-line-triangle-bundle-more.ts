@@ -1,0 +1,30 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { rotate90 } from './geometry-rotations';
+import { reflectX } from './geometry-reflections';
+import { translate } from './geometry-transform';
+import { normSq } from './geometry-metrics';
+import { onCircle } from './geometry-circle';
+import { incidence } from './geometry-incidence';
+import { onVerticalLine } from './geometry-line';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+const a = pair(numeral(1), numeral(2));
+const b = pair(numeral(3), numeral(1));
+const transform = (p: Term): Term => app(app(translate, app(reflectX, app(rotate90, p))), pair(numeral(1), numeral(2)));
+const ta = transform(a);
+const tb = transform(b);
+const line = pair(pair(numeral(3), numeral(0)), pair(numeral(1), numeral(0)));
+
+export const taType: Term = eq(Point2, ta, pair(numeral(3), numeral(3)));
+export const taProof: Term = refl(Point2, pair(numeral(3), numeral(3)));
+export const tbType: Term = eq(Point2, tb, pair(numeral(2), numeral(5)));
+export const tbProof: Term = refl(Point2, pair(numeral(2), numeral(5)));
+export const taNormType: Term = eq(Nat, app(normSq, ta), numeral(18));
+export const taNormProof: Term = refl(Nat, numeral(18));
+export const taCircleType: Term = app(app(onCircle, ta), pair(ta, numeral(18)));
+export const taCircleProof: Term = refl(Nat, numeral(18));
+export const taIncidenceType: Term = app(app(incidence, ta), line);
+export const taIncidenceProof: Term = refl(Nat, numeral(3));
+export const tbVerticalType: Term = app(app(onVerticalLine, tb), numeral(2));
+export const tbVerticalProof: Term = refl(Nat, numeral(2));

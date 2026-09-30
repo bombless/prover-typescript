@@ -1,4 +1,4 @@
-import { Term, Type, Nat, Zero, variable, pi, lambda, app, succ, natRec, eq, refl, eqRec } from '../syntax/ast';
+import { Term, Type, Nat, Bool, Empty, True, False, Zero, variable, pi, prod, pair, fst, snd, lambda, app, succ, natRec, boolRec, emptyRec, eq, refl, eqRec } from '../syntax/ast';
 import { definitionalEqual, substitute, shift, whnf } from './reduction';
 
 export type Context = readonly Term[];
@@ -13,7 +13,10 @@ export function infer(ctx: Context, term: Term): Term {
   switch (term.kind) {
     case 'Type': return Type;
     case 'Nat': return Type;
+    case 'Bool': return Type;
+    case 'Empty': return Type;
     case 'Zero': return Nat;
+    case 'True': case 'False': return Bool;
     case 'Var': {
       const type = ctx[ctx.length - 1 - term.index];
       if (!type) fail(`Unbound variable at de Bruijn index ${term.index}`);
@@ -27,6 +30,10 @@ export function infer(ctx: Context, term: Term): Term {
       check([...ctx, term.domain], term.body, Type);
       return Type;
     }
+    case 'Prod': { check(ctx, term.left, Type); check(ctx, term.right, Type); return Type; }
+    case 'Pair': { const leftType = infer(ctx, term.left); const rightType = infer(ctx, term.right); return prod(leftType, rightType); }
+    case 'Fst': { const pairType = whnf(infer(ctx, term.pair)); if (pairType.kind !== 'Prod') fail('Expected a product'); return pairType.left; }
+    case 'Snd': { const pairType = whnf(infer(ctx, term.pair)); if (pairType.kind !== 'Prod') fail('Expected a product'); return pairType.right; }
     case 'Lambda': {
       check(ctx, term.domain, Type);
       const bodyType = infer([...ctx, term.domain], term.body);
@@ -55,6 +62,18 @@ export function infer(ctx: Context, term: Term): Term {
       );
       check(ctx, term.succCase, succExpected);
       check(ctx, term.scrutinee, Nat);
+      return app(term.motive, term.scrutinee);
+    }
+    case 'BoolRec': {
+      check(ctx, term.motive, pi(Bool, Type, 'b'));
+      check(ctx, term.trueCase, app(term.motive, True));
+      check(ctx, term.falseCase, app(term.motive, False));
+      check(ctx, term.scrutinee, Bool);
+      return app(term.motive, term.scrutinee);
+    }
+    case 'EmptyRec': {
+      check(ctx, term.motive, pi(Empty, Type, 'e'));
+      check(ctx, term.scrutinee, Empty);
       return app(term.motive, term.scrutinee);
     }
     case 'Eq': {
@@ -108,13 +127,23 @@ export function show(term: Term): string {
   switch (term.kind) {
     case 'Type': return 'Type';
     case 'Nat': return 'Nat';
+    case 'Bool': return 'Bool';
+    case 'Empty': return 'Empty';
     case 'Zero': return '0';
+    case 'True': return 'true';
+    case 'False': return 'false';
     case 'Var': return term.name ?? `#${term.index}`;
     case 'Pi': return `(x : ${show(term.domain)}) -> ${show(term.body)}`;
+    case 'Prod': return `(${show(term.left)} x ${show(term.right)})`;
+    case 'Pair': return `(${show(term.left)}, ${show(term.right)})`;
+    case 'Fst': return `(fst ${show(term.pair)})`;
+    case 'Snd': return `(snd ${show(term.pair)})`;
     case 'Lambda': return `(fun x : ${show(term.domain)} => ${show(term.body)})`;
     case 'App': return `(${show(term.fn)} ${show(term.arg)})`;
     case 'Succ': return `(Succ ${show(term.value)})`;
     case 'NatRec': return `(Nat.rec ${show(term.motive)} ${show(term.zeroCase)} ${show(term.succCase)} ${show(term.scrutinee)})`;
+    case 'BoolRec': return `(Bool.rec ${show(term.motive)} ${show(term.trueCase)} ${show(term.falseCase)} ${show(term.scrutinee)})`;
+    case 'EmptyRec': return `(Empty.rec ${show(term.motive)} ${show(term.scrutinee)})`;
     case 'Eq': return `Eq ${show(term.type)} ${show(term.left)} ${show(term.right)}`;
     case 'Refl': return `refl ${show(term.value)}`;
     case 'EqRec': return `(Eq.rec ...)`;

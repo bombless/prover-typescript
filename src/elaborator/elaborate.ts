@@ -2,6 +2,10 @@ import {
   Term,
   Type,
   Nat,
+  Bool,
+  Empty,
+  True,
+  False,
   Zero,
   variable,
   pi,
@@ -56,6 +60,10 @@ export function elaborate(term: SurfaceTerm, context: LocalContext = [], environ
     }
     case 'App': return app(elaborate(term.fn, context, environment), elaborate(term.arg, context, environment));
     case 'Nat': return Nat;
+    case 'Bool': return Bool;
+    case 'Empty': return Empty;
+    case 'True': return True;
+    case 'False': return False;
     case 'Zero': return Zero;
     case 'Succ': return succ(elaborate(term.value, context, environment));
     case 'NatRec': return natRec(

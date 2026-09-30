@@ -35,7 +35,10 @@ function materializeCore(term: Term, context: MetaContext): Term {
     return materializeCore(candidate, context);
   };
   switch (term.kind) {
-    case 'Type': case 'Nat': case 'Zero': case 'Var': return term;
+    case 'Type': case 'Nat': case 'Bool': case 'Empty': case 'Zero': case 'True': case 'False': case 'Var': return term;
+    case 'Prod': case 'Pair': return { ...term, left: nested(term.left), right: nested(term.right) };
+    case 'Fst': return { ...term, pair: nested(term.pair) };
+    case 'Snd': return { ...term, pair: nested(term.pair) };
     case 'Pi': return { ...term, domain: nested(term.domain), body: nested(term.body) };
     case 'Lambda': return { ...term, domain: nested(term.domain), body: nested(term.body) };
     case 'App': return { ...term, fn: nested(term.fn), arg: nested(term.arg) };
@@ -45,6 +48,7 @@ function materializeCore(term: Term, context: MetaContext): Term {
     case 'Refl': return { ...term, type: nested(term.type), value: nested(term.value) };
     case 'EqRec': return { ...term, motive: nested(term.motive), reflCase: nested(term.reflCase), left: nested(term.left), right: nested(term.right), equality: nested(term.equality) };
   }
+  throw new UnificationError('Unsupported term in metavariable materialization');
 }
 
 export function substituteUnification(body: UnificationTerm, replacement: UnificationTerm, depth = 0): UnificationTerm {
@@ -54,7 +58,10 @@ export function substituteUnification(body: UnificationTerm, replacement: Unific
       if (body.index === depth) return shiftUnification(replacement, depth);
       if (body.index > depth) return { ...body, index: body.index - 1 };
       return body;
-    case 'Type': case 'Nat': case 'Zero': return body;
+    case 'Type': case 'Nat': case 'Bool': case 'Empty': case 'Zero': case 'True': case 'False': return body;
+    case 'Prod': case 'Pair': return { ...body, left: substituteUnification(body.left, replacement, depth) as Term, right: substituteUnification(body.right, replacement, depth) as Term };
+    case 'Fst': return { ...body, pair: substituteUnification(body.pair, replacement, depth) as Term };
+    case 'Snd': return { ...body, pair: substituteUnification(body.pair, replacement, depth) as Term };
     case 'Pi': return { ...body, domain: substituteUnification(body.domain, replacement, depth) as Term, body: substituteUnification(body.body, replacement, depth + 1) as Term };
     case 'Lambda': return { ...body, domain: substituteUnification(body.domain, replacement, depth) as Term, body: substituteUnification(body.body, replacement, depth + 1) as Term };
     case 'App': return { ...body, fn: substituteUnification(body.fn, replacement, depth) as Term, arg: substituteUnification(body.arg, replacement, depth) as Term };
@@ -64,13 +71,17 @@ export function substituteUnification(body: UnificationTerm, replacement: Unific
     case 'Refl': return { ...body, type: substituteUnification(body.type, replacement, depth) as Term, value: substituteUnification(body.value, replacement, depth) as Term };
     case 'EqRec': return { ...body, motive: substituteUnification(body.motive, replacement, depth) as Term, reflCase: substituteUnification(body.reflCase, replacement, depth) as Term, left: substituteUnification(body.left, replacement, depth) as Term, right: substituteUnification(body.right, replacement, depth) as Term, equality: substituteUnification(body.equality, replacement, depth) as Term };
   }
+  throw new UnificationError('Unsupported term in metavariable substitution');
 }
 
 function shiftUnification(term: UnificationTerm, amount: number, cutoff = 0): UnificationTerm {
   if (term.kind === 'meta') return term;
   switch (term.kind) {
     case 'Var': return { ...term, index: term.index >= cutoff ? term.index + amount : term.index };
-    case 'Type': case 'Nat': case 'Zero': return term;
+    case 'Type': case 'Nat': case 'Bool': case 'Empty': case 'Zero': case 'True': case 'False': return term;
+    case 'Prod': case 'Pair': return { ...term, left: shiftUnification(term.left, amount, cutoff) as Term, right: shiftUnification(term.right, amount, cutoff) as Term };
+    case 'Fst': return { ...term, pair: shiftUnification(term.pair, amount, cutoff) as Term };
+    case 'Snd': return { ...term, pair: shiftUnification(term.pair, amount, cutoff) as Term };
     case 'Pi': return { ...term, domain: shiftUnification(term.domain, amount, cutoff) as Term, body: shiftUnification(term.body, amount, cutoff + 1) as Term };
     case 'Lambda': return { ...term, domain: shiftUnification(term.domain, amount, cutoff) as Term, body: shiftUnification(term.body, amount, cutoff + 1) as Term };
     case 'App': return { ...term, fn: shiftUnification(term.fn, amount, cutoff) as Term, arg: shiftUnification(term.arg, amount, cutoff) as Term };
@@ -80,6 +91,7 @@ function shiftUnification(term: UnificationTerm, amount: number, cutoff = 0): Un
     case 'Refl': return { ...term, type: shiftUnification(term.type, amount, cutoff) as Term, value: shiftUnification(term.value, amount, cutoff) as Term };
     case 'EqRec': return { ...term, motive: shiftUnification(term.motive, amount, cutoff) as Term, reflCase: shiftUnification(term.reflCase, amount, cutoff) as Term, left: shiftUnification(term.left, amount, cutoff) as Term, right: shiftUnification(term.right, amount, cutoff) as Term, equality: shiftUnification(term.equality, amount, cutoff) as Term };
   }
+  throw new UnificationError('Unsupported term in metavariable shift');
 }
 
 function assignFromTerm(variable: MetaRef, value: UnificationTerm, context: MetaContext): MetaContext {
@@ -99,7 +111,9 @@ function occurs(id: number, term: UnificationTerm, context: MetaContext): boolea
   const resolved = prune(term, context);
   if (resolved.kind === 'meta') return resolved.id === id;
   switch (resolved.kind) {
-    case 'Type': case 'Nat': case 'Zero': case 'Var': return false;
+    case 'Type': case 'Nat': case 'Bool': case 'Empty': case 'Zero': case 'True': case 'False': case 'Var': return false;
+    case 'Prod': case 'Pair': return occurs(id, resolved.left, context) || occurs(id, resolved.right, context);
+    case 'Fst': case 'Snd': return occurs(id, resolved.pair, context);
     case 'Pi': case 'Lambda': return occurs(id, resolved.domain, context) || occurs(id, resolved.body, context);
     case 'App': return occurs(id, resolved.fn, context) || occurs(id, resolved.arg, context);
     case 'Succ': return occurs(id, resolved.value, context);
@@ -108,12 +122,15 @@ function occurs(id: number, term: UnificationTerm, context: MetaContext): boolea
     case 'Refl': return occurs(id, resolved.type, context) || occurs(id, resolved.value, context);
     case 'EqRec': return occurs(id, resolved.motive, context) || occurs(id, resolved.reflCase, context) || occurs(id, resolved.left, context) || occurs(id, resolved.right, context) || occurs(id, resolved.equality, context);
   }
+  return false;
 }
 
 function unifyCore(left: Term, right: Term, context: MetaContext): MetaContext {
   if (left.kind !== right.kind) throw new UnificationError(`Cannot unify ${left.kind} with ${right.kind}`);
   switch (left.kind) {
-    case 'Type': case 'Nat': case 'Zero': return context;
+    case 'Type': case 'Nat': case 'Bool': case 'Empty': case 'Zero': case 'True': case 'False': return context;
+    case 'Prod': case 'Pair': { const r = right as typeof left; return unify(left.left, r.left, unify(left.right, r.right, context)); }
+    case 'Fst': case 'Snd': return unify(left.pair, (right as typeof left).pair, context);
     case 'Var':
       if (left.index !== (right as typeof left).index) throw new UnificationError(`Cannot unify variables #${left.index} and #${(right as typeof left).index}`);
       return context;
@@ -153,4 +170,5 @@ function unifyCore(left: Term, right: Term, context: MetaContext): MetaContext {
       return unify(left.equality, r.equality, next);
     }
   }
+  throw new UnificationError('Unsupported term in unification');
 }

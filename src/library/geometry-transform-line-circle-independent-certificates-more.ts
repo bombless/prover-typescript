@@ -1,0 +1,32 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { rotate90 } from './geometry-rotations';
+import { reflectX } from './geometry-reflections';
+import { translate } from './geometry-transform';
+import { normSq } from './geometry-metrics';
+import { distanceSq } from './geometry-distance';
+import { incidence } from './geometry-incidence';
+import { onCircle } from './geometry-circle';
+import { onVerticalLine } from './geometry-line';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+export const Line2: Term = prod(Point2, prod(Nat, Nat));
+const p: Term = pair(numeral(4), numeral(1));
+const d: Term = pair(numeral(2), numeral(3));
+const moved: Term = app(app(translate, p), d);
+const turned: Term = app(rotate90, moved);
+const reflected: Term = app(reflectX, turned);
+const line: Term = pair(pair(numeral(3), numeral(0)), pair(numeral(1), numeral(0)));
+
+export const movedPointType: Term = eq(Point2, moved, pair(numeral(6), numeral(4)));
+export const movedPointProof: Term = refl(Point2, pair(numeral(6), numeral(4)));
+export const turnedPointType: Term = eq(Point2, turned, pair(numeral(4), numeral(6)));
+export const turnedPointProof: Term = refl(Point2, pair(numeral(4), numeral(6)));
+export const reflectedPointType: Term = eq(Point2, reflected, pair(numeral(4), numeral(6)));
+export const reflectedPointProof: Term = refl(Point2, pair(numeral(4), numeral(6)));
+export const turnedNormType: Term = eq(Nat, app(normSq, turned), numeral(52));
+export const turnedNormProof: Term = refl(Nat, numeral(52));
+export const verticalMembershipType: Term = app(app(onVerticalLine, turned), numeral(4));
+export const verticalMembershipProof: Term = refl(Nat, numeral(4));
+export const transformedCircleType: Term = app(app(onCircle, turned), pair(turned, numeral(52)));
+export const transformedCircleProof: Term = refl(Nat, numeral(52));

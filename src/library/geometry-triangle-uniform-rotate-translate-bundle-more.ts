@@ -1,0 +1,31 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { rotate90 } from './geometry-rotations';
+import { translate } from './geometry-transform';
+import { normSq } from './geometry-metrics';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+export const Triangle2: Term = prod(Point2, prod(Point2, Point2));
+const a = pair(numeral(1), numeral(2));
+const b = pair(numeral(3), numeral(1));
+const c = pair(numeral(2), numeral(4));
+const transform = (p: Term): Term => app(app(translate, app(rotate90, p)), pair(numeral(2), numeral(3)));
+const ta = transform(a);
+const tb = transform(b);
+const tc = transform(c);
+const triangle = pair(ta, pair(tb, tc));
+
+export const aType: Term = eq(Point2, ta, pair(numeral(4), numeral(4)));
+export const aProof: Term = refl(Point2, pair(numeral(4), numeral(4)));
+export const bType: Term = eq(Point2, tb, pair(numeral(3), numeral(6)));
+export const bProof: Term = refl(Point2, pair(numeral(3), numeral(6)));
+export const cType: Term = eq(Point2, tc, pair(numeral(6), numeral(5)));
+export const cProof: Term = refl(Point2, pair(numeral(6), numeral(5)));
+export const aNormType: Term = eq(Nat, app(normSq, ta), numeral(32));
+export const aNormProof: Term = refl(Nat, numeral(32));
+export const bNormType: Term = eq(Nat, app(normSq, tb), numeral(45));
+export const bNormProof: Term = refl(Nat, numeral(45));
+export const cNormType: Term = eq(Nat, app(normSq, tc), numeral(61));
+export const cNormProof: Term = refl(Nat, numeral(61));
+export const triangleType: Term = eq(Triangle2, triangle, triangle);
+export const triangleProof: Term = refl(Triangle2, triangle);

@@ -26,6 +26,7 @@ class Control {
   emit(event: string): void { for (const callback of this.listeners.get(event) ?? []) callback(); }
   focus(): void { this.owner.focused = this.attributes.id; }
   select(): void {}
+  setSelectionRange(_start: number, _end: number): void {}
 }
 
 class TestRoot {

@@ -150,7 +150,19 @@ function renderProofCourse(): void {
         scriptInputValue = "";
       }
       render();
-      root.querySelector<HTMLTextAreaElement>("#proof-script")?.focus();
+      const currentScriptInput = root.querySelector<HTMLTextAreaElement>("#proof-script");
+      currentScriptInput?.focus();
+      if (currentScriptInput && result.kind === "error" && result.line !== undefined) {
+        let start = 0;
+        for (const [index, line] of scriptInputValue.split(/\r\n|\r|\n/).entries()) {
+          if (index + 1 === result.line) {
+            currentScriptInput.setSelectionRange(start, start + line.length);
+            break;
+          }
+          start += line.length;
+          start += scriptInputValue.slice(start, start + 2) === "\r\n" ? 2 : 1;
+        }
+      }
     });
 
     root.querySelectorAll<HTMLButtonElement>("[data-tactic]").forEach((button) => button.addEventListener("click", () => {

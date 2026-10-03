@@ -71,12 +71,11 @@ test('apply checks inferred argument types before accepting an application', () 
   assert.equal(session.state, before);
 });
 
-test('apply rejects inferred arguments that escape the local scope', () => {
-  const theorem = lambda(Nat, refl(Nat, variable(0)));
-  const session = tacticSession(initialProofState(eq(Nat, variable(0), variable(0))));
-  const before = session.state;
-  assert.throws(() => session.apply(theorem), /Scope escape/);
-  assert.equal(session.state, before);
+test('apply cannot start from a root with escaped local variables', () => {
+  const state = initialProofState(eq(Nat, variable(0), variable(0)));
+  const before = JSON.stringify(state);
+  assert.throws(() => tacticSession(state), /Unbound variable/);
+  assert.equal(JSON.stringify(state), before);
 });
 
 test('apply rejects binder capture even when the inferred argument has the right type', () => {

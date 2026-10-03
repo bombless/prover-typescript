@@ -62,8 +62,8 @@ test('revert rejects older names and empty contexts without mutation', () => {
 });
 
 test('revert rejects malformed dependent targets before creating a replacement', () => {
-  const session = tacticSession({ goals: [{ context: [{ name: 'n', type: Nat }], type: variable(9) }] });
-  const before = session.state;
-  assert.throws(() => session.revert(), /Unbound variable/);
-  assert.equal(session.state, before);
+  const state = { goals: [{ context: [{ name: 'n', type: Nat }], type: variable(9) }] };
+  const before = JSON.stringify(state);
+  assert.throws(() => tacticSession(state), /Unbound variable/);
+  assert.equal(JSON.stringify(state), before);
 });

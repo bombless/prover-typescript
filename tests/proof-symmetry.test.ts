@@ -126,7 +126,8 @@ test('symmetry transforms only the focused goal in a multi-goal proof', () => {
 });
 
 test('symmetry rejects non-equality and invalid equality goals without changing the session', () => {
-  for (const target of [Nat, eq(Nat, Zero, Type)]) {
+  assert.throws(() => tacticSession(initialProofState(eq(Nat, Zero, Type))), TacticError);
+  for (const target of [Nat]) {
     const session = tacticSession(initialProofState(target));
     const before = session.state;
 

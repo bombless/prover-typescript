@@ -46,11 +46,12 @@ export function infer(ctx: Context, term: Term): Term {
       // Under the successor binder, the motive crosses one new binder before
       // it is applied to #0. Shift it into that extended context first.
       // Then, under the inner induction-hypothesis binder, #0 is the
-      // induction hypothesis and #1 is n.
+      // induction hypothesis and #1 is n. The result type is under both
+      // binders, so its motive must cross two binders to preserve outer locals.
       const motiveUnderSucc = shift(term.motive, 1);
       const succExpected = pi(
         Nat,
-        pi(app(motiveUnderSucc, variable(0)), app(motiveUnderSucc, succ(variable(1)))),
+        pi(app(motiveUnderSucc, variable(0)), app(shift(term.motive, 2), succ(variable(1)))),
         'n'
       );
       check(ctx, term.succCase, succExpected);

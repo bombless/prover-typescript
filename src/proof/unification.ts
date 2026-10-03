@@ -66,6 +66,31 @@ export function substituteUnification(body: UnificationTerm, replacement: Unific
   }
 }
 
+/** Expose a function type without passing proof-engine metavariables to Core reduction. */
+export function whnfUnification(term: UnificationTerm): UnificationTerm {
+  while (true) {
+    if (term.kind === 'App' && term.fn.kind === 'Lambda') {
+      term = substituteUnification(term.fn.body, term.arg);
+      continue;
+    }
+    if (term.kind === 'NatRec') {
+      if (term.scrutinee.kind === 'Zero') {
+        term = term.zeroCase;
+        continue;
+      }
+      if (term.scrutinee.kind === 'Succ') {
+        term = uApp(uApp(term.succCase, term.scrutinee.value), { ...term, scrutinee: term.scrutinee.value });
+        continue;
+      }
+    }
+    if (term.kind === 'EqRec' && term.equality.kind === 'Refl') {
+      term = term.reflCase;
+      continue;
+    }
+    return term;
+  }
+}
+
 function shiftUnification(term: UnificationTerm, amount: number, cutoff = 0): UnificationTerm {
   if (term.kind === 'meta') return term;
   switch (term.kind) {

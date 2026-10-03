@@ -70,9 +70,9 @@ test('induction rejects a missing variable without changing the proof state', ()
   assert.deepEqual(session.state, before);
 });
 
-test('failed induction target validation leaves state unchanged', () => {
+test('invalid induction roots are rejected before a tactic session is created', () => {
   const state = proofState([{ context: [{ name: 'n', type: Nat }], type: variable(1) }]);
-  const session = tacticSession(state);
-  assert.throws(() => session.induction('n'), (error: unknown) => error instanceof TacticError && /Unbound variable/.test(error.message));
-  assert.deepEqual(session.state, state);
+  const before = JSON.stringify(state);
+  assert.throws(() => tacticSession(state), (error: unknown) => error instanceof TacticError && /Unbound variable/.test(error.message));
+  assert.equal(JSON.stringify(state), before);
 });

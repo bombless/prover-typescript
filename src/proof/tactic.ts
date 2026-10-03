@@ -1,9 +1,9 @@
 import { check, infer, show } from '../kernel/typecheck';
 import { definitionalEqual, normalize, shift, whnf } from '../kernel/reduction';
-import { Term, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
+import { Term, Type, Nat, Zero, app, eq, eqRec, lambda, natRec, pi, refl, succ, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
-import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
+import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify, whnfUnification } from './unification';
 
 export class TacticError extends Error {
   constructor(message: string) { super(message); this.name = 'TacticError'; }
@@ -15,6 +15,7 @@ type ProofNode =
   | { readonly kind: 'lambda'; readonly domain: Term; readonly name?: string; readonly body: ProofNode }
   | { readonly kind: 'app'; readonly fn: ProofNode; readonly arg: ProofNode }
   | { readonly kind: 'eqRec'; readonly motive: Term; readonly left: Term; readonly right: Term; readonly equality: Term; readonly reflCase: ProofNode }
+  | { readonly kind: 'revert'; readonly body: ProofNode }
   | { readonly kind: 'natRec'; readonly motive: Term; readonly scrutinee: Term; readonly zeroCase: ProofNode; readonly succCase: ProofNode };
 
 interface Hole { readonly id: GoalId; readonly goal: Goal; readonly depth: number; }
@@ -78,6 +79,7 @@ function abstractEqualityTarget(term: Term, pattern: Term, depth = 0): { readonl
 function replaceNode(root: ProofNode, id: GoalId, replacement: ProofNode): ProofNode {
   if (root.kind === 'hole') return root.id === id ? replacement : root;
   if (root.kind === 'term') return root;
+  if (root.kind === 'revert') return { ...root, body: replaceNode(root.body, id, replacement) };
   if (root.kind === 'lambda') return { ...root, body: replaceNode(root.body, id, replacement) };
   if (root.kind === 'app') return { kind: 'app', fn: replaceNode(root.fn, id, replacement), arg: replaceNode(root.arg, id, replacement) };
   if (root.kind === 'eqRec') return { ...root, reflCase: replaceNode(root.reflCase, id, replacement) };
@@ -91,6 +93,9 @@ function compile(root: ProofNode, depth = 0): Term {
     case 'lambda': return lambda(root.domain, compile(root.body, depth + 1), root.name);
     case 'app': return app(compile(root.fn, depth), compile(root.arg, depth));
     case 'eqRec': return eqRec(root.motive, compile(root.reflCase, depth), root.left, root.right, root.equality);
+    // The child is proved without the newest local binder. Reintroduce that
+    // binder around the complete child term before applying it to the local.
+    case 'revert': return app(shift(compile(root.body, depth - 1), 1), variable(0));
     case 'natRec': {
       const successorCase = lambda(
         Nat,
@@ -128,8 +133,20 @@ export class TacticSession {
   }
 
   static fromState(input: ProofStateInput): TacticSession {
+    if (input.goals.length !== 1) throw new TacticError('A tactic session must start from one root goal');
+    // Local types are scoped in the preceding context, not the complete one.
+    // Check admission before normalization can reserve or allocate goal IDs.
+    const context: Term[] = [];
+    try {
+      for (const entry of input.goals[0].context) {
+        check(context, entry.type, Type);
+        context.push(entry.type);
+      }
+      check(context, input.goals[0].type, Type);
+    } catch (error) {
+      throw new TacticError(error instanceof Error ? error.message : String(error));
+    }
     const state = proofState(input.goals, input.focusedGoalId);
-    if (state.goals.length !== 1) throw new TacticError('A tactic session must start from one root goal');
     const rootGoal = state.goals[0];
     const hole = { id: rootGoal.id!, goal: rootGoal, depth: 0 };
     return new TacticSession(state, { kind: 'hole', id: hole.id }, [hole], hole.goal.context);
@@ -166,6 +183,24 @@ export class TacticSession {
     return this.withReplacement(hole.id, [child], root);
   }
 
+  /** Move the newest local binding back into a dependent function goal. */
+  revert(name?: string): TacticSession {
+    const hole = this.firstHole();
+    const entry = hole.goal.context[hole.goal.context.length - 1];
+    if (!entry) throw new TacticError('revert requires a local binding');
+    if (name !== undefined && name.trim() !== entry.name) {
+      throw new TacticError('revert can only remove the newest local binding');
+    }
+    const context = hole.goal.context.slice(0, -1);
+    const target = pi(entry.type, hole.goal.type, entry.name);
+    try { check(contextTypes(context), target, Type); }
+    catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+    const nextGoal = goal(context, target, hole.goal.caseName);
+    const child = { id: nextGoal.id!, goal: nextGoal, depth: hole.depth - 1 };
+    const root = replaceNode(this.root, hole.id, { kind: 'revert', body: { kind: 'hole', id: child.id } });
+    return this.withReplacement(hole.id, [child], root);
+  }
+
   exact(term: Term): TacticSession {
     const hole = this.firstHole();
     try { check(contextTypes(hole.goal.context), term, hole.goal.type); }
@@ -182,6 +217,35 @@ export class TacticSession {
     if (type.kind !== 'Eq') throw new TacticError(`rfl expected an equality goal, found ${show(type)}`);
     if (!definitionalEqual(type.left, type.right)) throw new TacticError(`rfl requires definitionally equal endpoints: ${show(type.left)} and ${show(type.right)}`);
     return this.exact(refl(type.type, type.left));
+  }
+
+  symmetry(): TacticSession {
+    const hole = this.firstHole();
+    const type = whnf(hole.goal.type);
+    if (type.kind !== 'Eq') throw new TacticError(`symmetry expected an equality goal, found ${show(type)}`);
+
+    const reversedType = eq(type.type, type.right, type.left);
+    // Given h : b = a, transport refl b along h with motive x => x = b.
+    // The explicit proof argument introduces one binder around the EqRec.
+    const motive = lambda(type.type, eq(shift(type.type, 1), variable(0), shift(type.right, 1)));
+    const reverseProof = lambda(reversedType, eqRec(
+      shift(motive, 1),
+      refl(shift(type.type, 1), shift(type.right, 1)),
+      shift(type.right, 1),
+      shift(type.left, 1),
+      variable(0),
+    ));
+    try { check(contextTypes(hole.goal.context), reverseProof, pi(reversedType, shift(hole.goal.type, 1))); }
+    catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+
+    const childGoal = goal(hole.goal.context, reversedType, hole.goal.caseName);
+    const child = { id: childGoal.id!, goal: childGoal, depth: hole.depth };
+    const root = replaceNode(this.root, hole.id, {
+      kind: 'app',
+      fn: { kind: 'term', term: reverseProof, depth: hole.depth },
+      arg: { kind: 'hole', id: child.id },
+    });
+    return this.withReplacement(hole.id, [child], root);
   }
 
   rewrite(equalityProof: Term): TacticSession {
@@ -292,19 +356,21 @@ export class TacticSession {
 
   apply(term: Term): TacticSession {
     const hole = this.firstHole();
-    let currentType: Term;
-    try { currentType = whnf(infer(contextTypes(hole.goal.context), term)); }
+    const context = contextTypes(hole.goal.context);
+    let originalType: Term;
+    try { originalType = whnf(infer(context, term)); }
     catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
 
+    let currentType: UnificationTerm = originalType;
     let metaContext = MetaContext.empty();
-    const argumentsForProof: Array<{ readonly type: UnificationTerm; readonly meta: UnificationTerm; readonly implicit: boolean }> = [];
+    const argumentsForProof: Array<{ readonly meta: UnificationTerm; readonly implicit: boolean }> = [];
     while (currentType.kind === 'Pi') {
       const created = metaContext.create(hole.goal.context.length, currentType.domain);
       metaContext = created.context;
-      argumentsForProof.push({ type: currentType.domain, meta: created.term, implicit: currentType.implicit === true });
-      currentType = whnf(substituteUnification(currentType.body, created.term) as Term);
+      argumentsForProof.push({ meta: created.term, implicit: currentType.implicit === true });
+      currentType = whnfUnification(substituteUnification(currentType.body, created.term));
     }
-    if (argumentsForProof.length === 0) throw new TacticError(`apply expected a function, found ${show(currentType)}`);
+    if (argumentsForProof.length === 0) throw new TacticError(`apply expected a function, found ${show(originalType)}`);
 
     try { metaContext = unify(currentType, hole.goal.type, metaContext); }
     catch (error) {
@@ -314,22 +380,41 @@ export class TacticSession {
 
     const childHoles: Hole[] = [];
     const argumentNodes: ProofNode[] = [];
+    // Replay the original telescope with materialized arguments. Unification
+    // is only an inference aid: its assignments must still have the expected
+    // Core types and produce the focused goal, including beneath binders.
+    let appliedType: UnificationTerm = originalType;
     for (const argument of argumentsForProof) {
+      appliedType = whnfUnification(appliedType);
+      if (appliedType.kind !== 'Pi') throw new TacticError('apply expected a function while checking inferred arguments');
+      const body = appliedType.body;
+      let argumentType: Term;
+      try { argumentType = toCoreTerm(appliedType.domain, metaContext); }
+      catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
       const resolved = metaContext.resolve((argument.meta as { kind: 'meta'; id: number }).id);
       if (resolved.kind === 'term') {
-        argumentNodes.push({ kind: 'term', term: resolved.term, depth: hole.depth });
+        let argumentTerm: Term;
+        try {
+          argumentTerm = toCoreTerm(argument.meta, metaContext);
+          check(context, argumentTerm, argumentType);
+        } catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+        argumentNodes.push({ kind: 'term', term: argumentTerm, depth: hole.depth });
+        appliedType = substituteUnification(body, argumentTerm);
       } else if (argument.implicit) {
         throw new TacticError(`Could not infer implicit argument ?m${resolved.id}`);
       } else {
-        let childType: Term;
-        try { childType = toCoreTerm(argument.type, metaContext); }
-        catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
-        const childGoal = goal(hole.goal.context, childType);
+        const childGoal = goal(hole.goal.context, argumentType);
         const child = { id: childGoal.id!, goal: childGoal, depth: hole.depth };
         childHoles.push(child);
         argumentNodes.push({ kind: 'hole', id: child.id });
+        appliedType = substituteUnification(body, argument.meta);
       }
     }
+    try {
+      if (!definitionalEqual(toCoreTerm(whnfUnification(appliedType), metaContext), hole.goal.type)) {
+        throw new TacticError('apply result mismatch after checking inferred arguments');
+      }
+    } catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
 
     let node: ProofNode = { kind: 'term', term, depth: hole.depth };
     for (const argumentNode of argumentNodes) node = { kind: 'app', fn: node, arg: argumentNode };

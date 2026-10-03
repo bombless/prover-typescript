@@ -15,6 +15,7 @@ type ProofNode =
   | { readonly kind: 'lambda'; readonly domain: Term; readonly name?: string; readonly body: ProofNode }
   | { readonly kind: 'app'; readonly fn: ProofNode; readonly arg: ProofNode }
   | { readonly kind: 'eqRec'; readonly motive: Term; readonly left: Term; readonly right: Term; readonly equality: Term; readonly reflCase: ProofNode }
+  | { readonly kind: 'revert'; readonly body: ProofNode }
   | { readonly kind: 'natRec'; readonly motive: Term; readonly scrutinee: Term; readonly zeroCase: ProofNode; readonly succCase: ProofNode };
 
 interface Hole { readonly id: GoalId; readonly goal: Goal; readonly depth: number; }
@@ -78,6 +79,7 @@ function abstractEqualityTarget(term: Term, pattern: Term, depth = 0): { readonl
 function replaceNode(root: ProofNode, id: GoalId, replacement: ProofNode): ProofNode {
   if (root.kind === 'hole') return root.id === id ? replacement : root;
   if (root.kind === 'term') return root;
+  if (root.kind === 'revert') return { ...root, body: replaceNode(root.body, id, replacement) };
   if (root.kind === 'lambda') return { ...root, body: replaceNode(root.body, id, replacement) };
   if (root.kind === 'app') return { kind: 'app', fn: replaceNode(root.fn, id, replacement), arg: replaceNode(root.arg, id, replacement) };
   if (root.kind === 'eqRec') return { ...root, reflCase: replaceNode(root.reflCase, id, replacement) };
@@ -91,6 +93,9 @@ function compile(root: ProofNode, depth = 0): Term {
     case 'lambda': return lambda(root.domain, compile(root.body, depth + 1), root.name);
     case 'app': return app(compile(root.fn, depth), compile(root.arg, depth));
     case 'eqRec': return eqRec(root.motive, compile(root.reflCase, depth), root.left, root.right, root.equality);
+    // The child is proved without the newest local binder. Reintroduce that
+    // binder around the complete child term before applying it to the local.
+    case 'revert': return app(shift(compile(root.body, depth - 1), 1), variable(0));
     case 'natRec': {
       const successorCase = lambda(
         Nat,
@@ -175,6 +180,24 @@ export class TacticSession {
     const newGoal = goal([...hole.goal.context, { name: type.name ?? 'x', type: type.domain }], type.body, hole.goal.caseName);
     const child = { id: newGoal.id!, goal: newGoal, depth: hole.depth + 1 };
     const root = replaceNode(this.root, hole.id, { kind: 'lambda', domain: type.domain, name: type.name, body: { kind: 'hole', id: child.id } });
+    return this.withReplacement(hole.id, [child], root);
+  }
+
+  /** Move the newest local binding back into a dependent function goal. */
+  revert(name?: string): TacticSession {
+    const hole = this.firstHole();
+    const entry = hole.goal.context[hole.goal.context.length - 1];
+    if (!entry) throw new TacticError('revert requires a local binding');
+    if (name !== undefined && name.trim() !== entry.name) {
+      throw new TacticError('revert can only remove the newest local binding');
+    }
+    const context = hole.goal.context.slice(0, -1);
+    const target = pi(entry.type, hole.goal.type, entry.name);
+    try { check(contextTypes(context), target, Type); }
+    catch (error) { throw new TacticError(error instanceof Error ? error.message : String(error)); }
+    const nextGoal = goal(context, target, hole.goal.caseName);
+    const child = { id: nextGoal.id!, goal: nextGoal, depth: hole.depth - 1 };
+    const root = replaceNode(this.root, hole.id, { kind: 'revert', body: { kind: 'hole', id: child.id } });
     return this.withReplacement(hole.id, [child], root);
   }
 

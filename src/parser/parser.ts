@@ -1,6 +1,7 @@
 import {
   SurfaceTerm,
   surfaceApp,
+  surfaceArrow,
   surfaceEq,
   surfaceLambda,
   surfaceNat,
@@ -49,13 +50,27 @@ function tokenize(input: string): Token[] {
 class Parser {
   private readonly tokens: readonly Token[];
   private position = 0;
+  private nesting = 0;
   constructor(input: string) { this.tokens = tokenize(input); }
   parse(): SurfaceTerm {
     const term = this.parseTerm();
     if (this.current.kind !== 'eof') throw this.error(`Unexpected token '${this.current.text}'`);
     return term;
   }
-  private parseTerm(): SurfaceTerm { return this.current.kind === 'lparen' && this.looksLikeBinder() ? this.parseBinder() : this.parseApplication(); }
+  // Count active recursive term/atom calls, not the number of sibling tokens.
+  private nested(parse: () => SurfaceTerm): SurfaceTerm {
+    if (this.nesting >= 256) throw this.error('Syntax nesting limit of 256 exceeded');
+    this.nesting += 1;
+    try { return parse(); } finally { this.nesting -= 1; }
+  }
+  private parseTerm(): SurfaceTerm { return this.nested(() => this.parseTermInner()); }
+  private parseTermInner(): SurfaceTerm {
+    if (this.current.kind === 'lparen' && this.looksLikeBinder()) return this.parseBinder();
+    const domain = this.parseApplication();
+    if (this.current.kind !== 'arrow') return domain;
+    this.position += 1;
+    return surfaceArrow(domain, this.parseTerm());
+  }
   private parseBinder(): SurfaceTerm {
     this.expect('lparen');
     const name = this.expect('identifier').text;
@@ -73,7 +88,8 @@ class Parser {
     while (this.startsAtom(this.current)) term = surfaceApp(term, this.parseAtom());
     return term;
   }
-  private parseAtom(): SurfaceTerm {
+  private parseAtom(): SurfaceTerm { return this.nested(() => this.parseAtomInner()); }
+  private parseAtomInner(): SurfaceTerm {
     const token = this.current;
     if (token.kind === 'identifier') {
       this.position += 1;

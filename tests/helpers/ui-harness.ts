@@ -43,7 +43,7 @@ export class TestRoot {
   set innerHTML(html: string) {
     this.html = html;
     this.controls = [];
-    for (const match of html.matchAll(/<(button|input|textarea|output|h1|pre|p|div|section|span)\b([^>]*)>/g)) {
+    for (const match of html.matchAll(/<(button|input|textarea|output|h1|pre|p|div|section|span|a)\b([^>]*)>/g)) {
       const attributes: Record<string, string> = { tag: match[1] };
       for (const entry of match[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) attributes[entry[1]] = decode(entry[2] ?? "");
       const control = new TestControl(attributes, this);
@@ -79,6 +79,7 @@ export function loadCourse(initialHash = "") {
     require: (name: string) => name.endsWith(".css") ? {} : name === "./kv-cache-lab" ? { renderKVCacheLab() { root.innerHTML = '<div id="lab">KV lab</div>'; } } : nativeRequire(name),
     document: { querySelector: () => root },
     location,
+    history: { replaceState(_data: unknown, _unused: string, hash: string) { location.hash = hash; } },
     window: { addEventListener(type: string, callback: () => void) { listeners.set(type, callback); } },
   });
   return { root, location, navigate(hash: string) { location.hash = hash; listeners.get("hashchange")?.(); } };

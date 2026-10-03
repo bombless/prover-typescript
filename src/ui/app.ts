@@ -49,7 +49,7 @@ function renderProofCourse(): void {
   }
 
   function renderProofScript(): string {
-    return `<section class="card script-card"><label class="card-title" for="proof-script">Proof script</label><p id="script-help" class="muted">Run one tactic per line from the current goal. Blank lines and -- comments are allowed. If any line fails, the whole script is rolled back. Limit: ${MAX_PROOF_SCRIPT_COMMANDS} tactics.</p><textarea id="proof-script" class="tactic-input script-input" rows="6" maxlength="${MAX_PROOF_SCRIPT_LENGTH}" spellcheck="false" aria-invalid="${scriptError ? "true" : "false"}" aria-describedby="script-help${scriptError ? " script-feedback" : ""}" placeholder="-- One tactic per line">${escapeHtml(scriptInputValue)}</textarea>${scriptError ? `<div id="script-feedback" class="tactic-feedback" role="alert">${escapeHtml(scriptError)}</div>` : ""}<button id="run-script-button" class="apply-button" type="button">Run script</button></section>`;
+    return `<section class="card script-card"><label class="card-title" for="proof-script">Proof script</label><p id="script-help" class="muted">Run one tactic per line from the current goal. Press Ctrl+Enter or Cmd+Enter to run. Blank lines and -- comments are allowed. If any line fails, the whole script is rolled back. Limit: ${MAX_PROOF_SCRIPT_COMMANDS} tactics.</p><textarea id="proof-script" aria-keyshortcuts="Control+Enter Meta+Enter" class="tactic-input script-input" rows="6" maxlength="${MAX_PROOF_SCRIPT_LENGTH}" spellcheck="false" aria-invalid="${scriptError ? "true" : "false"}" aria-describedby="script-help${scriptError ? " script-feedback" : ""}" placeholder="-- One tactic per line">${escapeHtml(scriptInputValue)}</textarea>${scriptError ? `<div id="script-feedback" class="tactic-feedback" role="alert">${escapeHtml(scriptError)}</div>` : ""}<button id="run-script-button" class="apply-button" type="button">Run script</button></section>`;
   }
 
   function renderTactics(): string {
@@ -138,7 +138,7 @@ function renderProofCourse(): void {
     apply?.addEventListener("click", applyTactic);
     const scriptInput = root.querySelector<HTMLTextAreaElement>("#proof-script");
     scriptInput?.addEventListener("input", () => { scriptInputValue = scriptInput.value; });
-    root.querySelector<HTMLButtonElement>("#run-script-button")?.addEventListener("click", () => {
+    const runScript = () => {
       if (!scriptInput || !state) return;
       scriptInputValue = scriptInput.value;
       const result = engine.runScript(scriptInputValue);
@@ -151,7 +151,14 @@ function renderProofCourse(): void {
         scriptInputValue = "";
       }
       render();
-      root.querySelector<HTMLTextAreaElement>("#proof-script")?.focus();
+      if (state.completed) root.querySelector<HTMLDivElement>("#proof-completion")?.focus();
+      else root.querySelector<HTMLTextAreaElement>("#proof-script")?.focus();
+    };
+    root.querySelector<HTMLButtonElement>("#run-script-button")?.addEventListener("click", runScript);
+    scriptInput?.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
+      event.preventDefault();
+      runScript();
     });
 
     root.querySelectorAll<HTMLButtonElement>("[data-tactic]").forEach((button) => button.addEventListener("click", () => {

@@ -21,6 +21,49 @@ export function stripLineComments(input: string): string {
   return input.replace(/--[^\r\n]*/g, comment => ' '.repeat(comment.length));
 }
 
+/** Mask comments while preserving UTF-16 offsets and line breaks.
+ * An unfinished block is returned for stream clients to request another line.
+ */
+export function scanComments(input: string): { readonly source: string; readonly openBlockPosition?: number } {
+  const output = input.split('');
+  const blocks: number[] = [];
+  let lineComment = false;
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+    if (lineComment) {
+      if (char === '\r' || char === '\n') lineComment = false;
+      else output[index] = ' ';
+      continue;
+    }
+    if (blocks.length > 0) {
+      if (input.startsWith('/-', index)) {
+        blocks.push(index);
+        output[index] = output[++index] = ' ';
+      } else if (input.startsWith('-/', index)) {
+        blocks.pop();
+        output[index] = output[++index] = ' ';
+      } else if (char !== '\r' && char !== '\n') output[index] = ' ';
+      continue;
+    }
+    if (input.startsWith('--', index)) {
+      lineComment = true;
+      output[index] = output[++index] = ' ';
+    } else if (input.startsWith('/-', index)) {
+      blocks.push(index);
+      output[index] = output[++index] = ' ';
+    }
+  }
+  return { source: output.join(''), openBlockPosition: blocks[0] };
+}
+
+export function stripComments(input: string): string {
+  const result = scanComments(input);
+  if (result.openBlockPosition !== undefined) {
+    throw new ParseError(`Unterminated block comment at position ${result.openBlockPosition}`);
+  }
+  return result.source;
+}
+
 function tokenize(input: string): Token[] {
   const tokens: Token[] = [];
   let position = 0;
@@ -117,4 +160,4 @@ class Parser {
   private error(message: string): ParseError { return new ParseError(`${message} at position ${this.current.position}`); }
 }
 
-export function parse(input: string): SurfaceTerm { return new Parser(stripLineComments(input)).parse(); }
+export function parse(input: string): SurfaceTerm { return new Parser(stripComments(input)).parse(); }

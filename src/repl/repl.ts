@@ -3,7 +3,7 @@ import { elaborate } from '../elaborator/elaborate';
 import { check, infer, show } from '../kernel/typecheck';
 import { GlobalEnvironment, Environment } from '../environment/environment';
 import { parseCommand } from '../parser/command';
-import { stripLineComments } from '../parser/parser';
+import { stripComments } from '../parser/parser';
 import { ProofState } from '../proof/state';
 
 export const EXIT_COMMAND = 'exit';
@@ -18,7 +18,7 @@ export function formatProofState(state: ProofState): string {
   })].join('\n\n');
 }
 export function processLine(input: string, environment: Environment = new GlobalEnvironment()): string | null {
-  const line = stripLineComments(input).trim();
+  const line = stripComments(input).trim();
   if (line === '') return '';
   if (line === EXIT_COMMAND) return null;
   const command = parseCommand(line);

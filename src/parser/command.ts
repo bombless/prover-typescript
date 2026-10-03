@@ -1,5 +1,5 @@
 import { SurfaceTerm } from '../syntax/surface';
-import { ParseError, parse, stripLineComments } from './parser';
+import { ParseError, parse, stripComments } from './parser';
 
 export type Command =
   | { readonly kind: 'term'; readonly term: SurfaceTerm }
@@ -9,7 +9,7 @@ export type Command =
 const identifierPattern = /^[A-Za-z_][A-Za-z0-9_']*$/;
 
 export function parseCommand(input: string): Command {
-  const source = stripLineComments(input).trim();
+  const source = stripComments(input).trim();
   if (/^def(?:\s|$)/.test(source)) {
     const match = /^def\s+([^\s:=]+)\s*:=\s*([\s\S]*)$/.exec(source);
     if (!match) throw new ParseError("Expected 'def name := term'");

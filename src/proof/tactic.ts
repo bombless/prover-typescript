@@ -1,6 +1,6 @@
 import { check, infer, show } from '../kernel/typecheck';
 import { definitionalEqual, normalize, shift, whnf } from '../kernel/reduction';
-import { Term, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
+import { Term, Type, Nat, Zero, app, eqRec, lambda, natRec, refl, succ, variable } from '../syntax/ast';
 import { Context, Goal, GoalId, ProofState, goal, proofState } from './state';
 import { MetaContext } from './metavariable/meta';
 import { UnificationError, UnificationTerm, substituteUnification, toCoreTerm, unify } from './unification';
@@ -128,8 +128,20 @@ export class TacticSession {
   }
 
   static fromState(input: ProofStateInput): TacticSession {
+    if (input.goals.length !== 1) throw new TacticError('A tactic session must start from one root goal');
+    // Local types are scoped in the preceding context, not the complete one.
+    // Check admission before normalization can reserve or allocate goal IDs.
+    const context: Term[] = [];
+    try {
+      for (const entry of input.goals[0].context) {
+        check(context, entry.type, Type);
+        context.push(entry.type);
+      }
+      check(context, input.goals[0].type, Type);
+    } catch (error) {
+      throw new TacticError(error instanceof Error ? error.message : String(error));
+    }
     const state = proofState(input.goals, input.focusedGoalId);
-    if (state.goals.length !== 1) throw new TacticError('A tactic session must start from one root goal');
     const rootGoal = state.goals[0];
     const hole = { id: rootGoal.id!, goal: rootGoal, depth: 0 };
     return new TacticSession(state, { kind: 'hole', id: hole.id }, [hole], hole.goal.context);

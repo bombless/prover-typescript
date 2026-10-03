@@ -10,6 +10,8 @@ export class EnvironmentError extends Error {
 export interface Environment {
   lookup(name: string): Term | undefined;
   define(name: string, term: Term): void;
+  /** Clear this session when supported by the environment. */
+  clear?(): void;
 }
 
 export class GlobalEnvironment implements Environment {
@@ -17,6 +19,10 @@ export class GlobalEnvironment implements Environment {
 
   lookup(name: string): Term | undefined {
     return this.definitions.get(name);
+  }
+
+  clear(): void {
+    this.definitions.clear();
   }
 
   define(name: string, term: Term): void {

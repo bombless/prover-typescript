@@ -1,7 +1,7 @@
 import readline from 'node:readline';
 import { elaborate } from '../elaborator/elaborate';
 import { check, infer, show } from '../kernel/typecheck';
-import { GlobalEnvironment, Environment } from '../environment/environment';
+import { GlobalEnvironment, Environment, EnvironmentError } from '../environment/environment';
 import { parseCommand } from '../parser/command';
 import { ProofState } from '../proof/state';
 
@@ -21,6 +21,11 @@ export function processLine(input: string, environment: Environment = new Global
   if (line === '') return '';
   if (line === EXIT_COMMAND) return null;
   const command = parseCommand(line);
+  if (command.kind === 'reset') {
+    if (!environment.clear) throw new EnvironmentError('This environment does not support clearing definitions');
+    environment.clear();
+    return 'Session definitions cleared.';
+  }
   if (command.kind === 'term') {
     const core = elaborate(command.term, [], environment);
     return show(infer([], core));

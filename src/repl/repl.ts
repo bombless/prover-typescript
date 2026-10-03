@@ -3,6 +3,7 @@ import { elaborate } from '../elaborator/elaborate';
 import { check, infer, show } from '../kernel/typecheck';
 import { GlobalEnvironment, Environment } from '../environment/environment';
 import { parseCommand } from '../parser/command';
+import { scanComments, stripComments } from '../parser/parser';
 import { ProofState } from '../proof/state';
 
 export const EXIT_COMMAND = 'exit';
@@ -17,7 +18,7 @@ export function formatProofState(state: ProofState): string {
   })].join('\n\n');
 }
 export function processLine(input: string, environment: Environment = new GlobalEnvironment()): string | null {
-  const line = input.trim();
+  const line = stripComments(input).trim();
   if (line === '') return '';
   if (line === EXIT_COMMAND) return null;
   const command = parseCommand(line);
@@ -42,24 +43,62 @@ export function processLine(input: string, environment: Environment = new Global
 export async function startRepl(
   input: NodeJS.ReadableStream = process.stdin,
   output: NodeJS.WritableStream = process.stdout,
+  options: { readonly interactive?: boolean } = {},
 ): Promise<void> {
-  const rl = readline.createInterface({ input, output, prompt: '> ' });
+  const terminal = Boolean(
+    (input as NodeJS.ReadableStream & { isTTY?: boolean }).isTTY
+    && (output as NodeJS.WritableStream & { isTTY?: boolean }).isTTY,
+  );
+  const interactive = options.interactive ?? terminal;
+  const rl = readline.createInterface({ input, output, terminal: terminal && interactive, prompt: '> ' });
   const environment = new GlobalEnvironment();
   let closed = false;
   rl.on('close', () => { closed = true; });
-  output.write('prover-typescript REPL\n');
-  rl.prompt();
-  for await (const line of rl) {
-    try {
-      const result = processLine(line, environment);
-      if (result === null) { rl.close(); return; }
-      if (result !== '') output.write(`${result}\n`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const kind = error instanceof Error ? error.name : 'Error';
-      output.write(`Error [${kind}]: ${message}\n`);
+  try {
+    if (interactive) {
+      output.write('prover-typescript REPL\n');
+      rl.prompt();
     }
-    if (closed) break;
-    rl.prompt();
+    let pending = '';
+    const runCommand = (source: string): boolean => {
+      try {
+        const result = processLine(source, environment);
+        if (result === null) return false;
+        if (result !== '') output.write(`${result}\n`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const kind = error instanceof Error ? error.name : 'Error';
+        output.write(`Error [${kind}]: ${message}\n`);
+      }
+      return true;
+    };
+    for await (const line of rl) {
+      // A bare exit line also lets a user leave an unfinished command/comment.
+      if (line.trim() === EXIT_COMMAND) { rl.close(); return; }
+      const source = pending === '' ? line : `${pending}\n${line}`;
+      const comments = scanComments(source);
+      let parentheses = 0;
+      let unmatchedCloser = false;
+      for (const char of comments.source) {
+        if (char === '(') parentheses += 1;
+        if (char === ')' && --parentheses < 0) { unmatchedCloser = true; break; }
+      }
+      if (!unmatchedCloser && (parentheses > 0 || comments.openBlockPosition !== undefined)) {
+        pending = source;
+      } else {
+        // Clear before evaluation so a rejected command cannot capture the next line.
+        pending = '';
+        if (!runCommand(source)) { rl.close(); return; }
+      }
+      // Drain queued lines after EOF; only the next prompt requires open input.
+      if (!closed && interactive) {
+        rl.setPrompt(pending === '' ? '> ' : '... ');
+        rl.prompt();
+      }
+    }
+    // Strict parsing supplies the normal positioned diagnostic for incomplete input.
+    if (pending !== '') runCommand(pending);
+  } finally {
+    rl.close();
   }
 }

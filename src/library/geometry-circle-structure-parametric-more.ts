@@ -35,3 +35,11 @@ export const rotateCircleCenterSndGeneralType: Term = pi(Circle2,
   eq(Nat, snd(app(rotate90, fst(variable(0)))), fst(fst(variable(0)))), 'c');
 export const rotateCircleCenterSndGeneralProof: Term = lambda(Circle2,
   refl(Nat, fst(fst(variable(0)))), 'c');
+
+/** Circle centers are reconstructed from transformed center projections. */
+export const rotateCircleCenterEtaType: Term = pi(Circle2,
+  eq(Point2,
+    pair(fst(app(rotate90, fst(variable(0)))), snd(app(rotate90, fst(variable(0))))),
+    app(rotate90, fst(variable(0)))), 'c');
+export const rotateCircleCenterEtaProof: Term = lambda(Circle2,
+  refl(Point2, app(rotate90, fst(variable(0)))), 'c');

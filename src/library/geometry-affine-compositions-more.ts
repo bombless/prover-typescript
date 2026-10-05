@@ -33,3 +33,8 @@ export const scaleTranslatePointProof: Term = lambda(Nat, lambda(Vec2, lambda(Ve
   refl(Vec2, { kind: 'Pair',
     left: addTerm(mulTerm(variable(2), fst(variable(1))), fst(variable(0))),
     right: addTerm(mulTerm(variable(2), snd(variable(1))), snd(variable(0))) }), 'd'), 'v'), 'k');
+
+export const scaleTranslateConcreteType: Term = eq(Vec2,
+  app(app(translate, app(app(scaleVec, { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Zero' } } }), { kind: 'Pair', left: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Zero' } } }, right: { kind: 'Succ', value: { kind: 'Zero' } } })), { kind: 'Pair', left: { kind: 'Succ', value: { kind: 'Zero' } }, right: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Zero' } } } } }),
+  { kind: 'Pair', left: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Zero' } } } } } }, right: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Zero' } } } } } } });
+export const scaleTranslateConcreteProof: Term = refl(Vec2, { kind: 'Pair', left: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Zero' } } } } } }, right: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Succ', value: { kind: 'Zero' } } } } } } });

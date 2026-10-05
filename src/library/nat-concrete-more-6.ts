@@ -1,0 +1,10 @@
+import { Term, Nat, Zero, app, eq, refl } from '../syntax/ast';
+import { numeral, addTerm } from './nat'; import { mulTerm } from './mul'; import { powTerm } from './pow'; import { pred } from './pred'; import { sub } from './sub';
+const e=(a:Term,b:Term):Term=>eq(Nat,a,b); const s=(a:Term,b:Term):Term=>app(app(sub,a),b); const p=(n:number):Term=>refl(Nat,numeral(n));
+export const addFiftySixSeventeenType=e(addTerm(numeral(56),numeral(17)),numeral(73)); export const addFiftySixSeventeenProof=p(73);
+export const mulElevenSixType=e(mulTerm(numeral(11),numeral(6)),numeral(66)); export const mulElevenSixProof=p(66);
+export const powTwoSevenType=e(powTerm(numeral(2),numeral(7)),numeral(128)); export const powTwoSevenProof=p(128);
+export const predFiftyType=e(app(pred,numeral(50)),numeral(49)); export const predFiftyProof=p(49);
+export const subThirtyFiveType=e(s(numeral(35),numeral(17)),numeral(18)); export const subThirtyFiveProof=p(18);
+export const mixedNatType=e(addTerm(mulTerm(numeral(5),numeral(8)),s(numeral(14),numeral(6))),numeral(48)); export const mixedNatProof=p(48);
+export const zeroMinusLargeType=e(s(Zero,addTerm(numeral(10),numeral(9))),Zero); export const zeroMinusLargeProof=p(0);

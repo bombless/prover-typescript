@@ -1,0 +1,10 @@
+import { Term, Nat, Bool, True, False, Zero, succ, variable, pi, lambda, eq, refl, app } from '../syntax/ast';
+import { isZero, parity } from './nat-predicates';
+const n=variable(0); const iz=(v:Term,r:Term)=>eq(Bool,app(isZero,v),r); const pa=(v:Term,r:Term)=>eq(Bool,app(parity,v),r);
+const s=(k:number,v:Term):Term=>{let x=v; for(let i=0;i<k;i++) x=succ(x); return x;};
+export const isZeroSuccSevenType=pi(Nat,iz(s(7,n),False),'n'); export const isZeroSuccSevenProof=lambda(Nat,refl(Bool,False),'n');
+export const isZeroSuccEightType=pi(Nat,iz(s(8,n),False),'n'); export const isZeroSuccEightProof=lambda(Nat,refl(Bool,False),'n');
+export const parityNineType=pa(s(9,Zero),False); export const parityNineProof=refl(Bool,False);
+export const parityTenType=pa(s(10,Zero),True); export const parityTenProof=refl(Bool,True);
+export const parityElevenType=pa(s(11,Zero),False); export const parityElevenProof=refl(Bool,False);
+export const parityTwelveType=pa(s(12,Zero),True); export const parityTwelveProof=refl(Bool,True);

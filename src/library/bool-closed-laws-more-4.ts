@@ -1,0 +1,13 @@
+import { Term, Bool, True, False, app, eq, refl } from '../syntax/ast';
+import { boolAnd, boolOr } from './bool-ops';
+import { boolNot } from './bool';
+import { boolXor } from './bool-xor';
+const e=(a:Term,b:Term):Term=>eq(Bool,a,b); const a=(x:Term,y:Term):Term=>app(app(boolAnd,x),y); const o=(x:Term,y:Term):Term=>app(app(boolOr,x),y); const n=(x:Term):Term=>app(boolNot,x); const x=(p:Term,q:Term):Term=>app(app(boolXor,p),q);
+export const andIdentityType=e(a(True,True),True); export const andIdentityProof=refl(Bool,True);
+export const andDominationType=e(a(False,True),False); export const andDominationProof=refl(Bool,False);
+export const orIdentityType=e(o(False,False),False); export const orIdentityProof=refl(Bool,False);
+export const orDominationType=e(o(True,False),True); export const orDominationProof=refl(Bool,True);
+export const xorSelfType=e(x(False,False),False); export const xorSelfProof=refl(Bool,False);
+export const xorComplementType=e(x(True,False),True); export const xorComplementProof=refl(Bool,True);
+export const notIdentityType=e(n(False),True); export const notIdentityProof=refl(Bool,True);
+export const notDominationType=e(n(True),False); export const notDominationProof=refl(Bool,False);

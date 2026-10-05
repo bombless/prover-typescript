@@ -1,0 +1,10 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd, pair } from '../syntax/ast';
+import { Hexagon2 } from './geometry-hexagon-vertex-projection-bundle-more-2';
+import { midpoint } from './geometry-segment';
+import { translate } from './geometry-transform';
+import { rotate90 } from './geometry-rotations';
+import { addTerm } from './nat';
+export const Point2: Term = prod(Nat, Nat);
+const first=(q:Term)=>fst(q); const sixth=(q:Term)=>snd(snd(snd(snd(snd(q))))); const tr=(p:Term,d:Term)=>app(app(translate,app(rotate90,p)),d);
+export const firstSixthTransformedMidpointType: Term = pi(Point2, pi(Hexagon2, eq(Point2, app(app(midpoint,tr(first(variable(0)),variable(1))),tr(sixth(variable(0)),variable(1))), pair(addTerm(snd(first(variable(0))),fst(variable(1))),addTerm(fst(sixth(variable(0))),snd(variable(1))))), 'h'),'d');
+export const firstSixthTransformedMidpointProof: Term = lambda(Point2,lambda(Hexagon2,refl(Point2,pair(addTerm(snd(first(variable(0))),fst(variable(1))),addTerm(fst(sixth(variable(0))),snd(variable(1))))),'h'),'d');

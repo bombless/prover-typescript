@@ -1,0 +1,25 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { rotate90 } from './geometry-rotations';
+import { translate } from './geometry-transform';
+import { normSq, dot2 } from './geometry-metrics';
+import { cross2 } from './geometry-cross';
+import { midpoint } from './geometry-segment';
+import { onCircle } from './geometry-circle';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+const d = pair(numeral(1), numeral(1));
+const t = (p: Term): Term => app(app(translate, app(rotate90, p)), d);
+const a = t(pair(numeral(1), numeral(2))); const b = t(pair(numeral(2), numeral(3)));
+const c = t(pair(numeral(3), numeral(1))); const e = t(pair(numeral(4), numeral(2)));
+const f = t(pair(numeral(5), numeral(3))); const m = app(app(midpoint, a), e);
+export const aType: Term = eq(Point2, a, pair(numeral(3), numeral(2))); export const aProof: Term = refl(Point2, pair(numeral(3), numeral(2)));
+export const bType: Term = eq(Point2, b, pair(numeral(4), numeral(3))); export const bProof: Term = refl(Point2, pair(numeral(4), numeral(3)));
+export const cType: Term = eq(Point2, c, pair(numeral(2), numeral(4))); export const cProof: Term = refl(Point2, pair(numeral(2), numeral(4)));
+export const eType: Term = eq(Point2, e, pair(numeral(3), numeral(5))); export const eProof: Term = refl(Point2, pair(numeral(3), numeral(5)));
+export const fType: Term = eq(Point2, f, pair(numeral(4), numeral(6))); export const fProof: Term = refl(Point2, pair(numeral(4), numeral(6)));
+export const midpointType: Term = eq(Point2, m, pair(numeral(3), numeral(5))); export const midpointProof: Term = refl(Point2, pair(numeral(3), numeral(5)));
+export const aNormType: Term = eq(Nat, app(normSq, a), numeral(13)); export const aNormProof: Term = refl(Nat, numeral(13));
+export const abDotType: Term = eq(Nat, app(app(dot2, a), b), numeral(18)); export const abDotProof: Term = refl(Nat, numeral(18));
+export const acCrossType: Term = eq(Nat, app(app(cross2, a), c), numeral(16)); export const acCrossProof: Term = refl(Nat, numeral(16));
+export const fCircleType: Term = app(app(onCircle, f), pair(f, numeral(52))); export const fCircleProof: Term = refl(Nat, numeral(52));

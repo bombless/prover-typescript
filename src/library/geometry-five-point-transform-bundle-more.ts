@@ -7,6 +7,7 @@ import { onCircle } from './geometry-circle';
 import { incidence } from './geometry-incidence';
 import { onVerticalLine } from './geometry-line';
 import { numeral } from './nat';
+import { midpoint } from './geometry-segment';
 
 /** Five independently checked points under the concrete map (x,y) ↦ (y+2,x+1). */
 export const Point2: Term = prod(Nat, Nat);
@@ -43,3 +44,16 @@ export const dIncidenceType: Term = app(app(incidence, d), pair(pair(numeral(4),
 export const dIncidenceProof: Term = refl(Nat, numeral(4));
 export const eVerticalType: Term = app(app(onVerticalLine, e), numeral(3));
 export const eVerticalProof: Term = refl(Nat, numeral(3));
+
+export const bNormType: Term = eq(Nat, app(normSq, b), numeral(8));
+export const bNormProof: Term = refl(Nat, numeral(8));
+export const dNormType: Term = eq(Nat, app(normSq, d), numeral(32));
+export const dNormProof: Term = refl(Nat, numeral(32));
+export const aeDotType: Term = eq(Nat, app(app(dot2, a), e), numeral(14));
+export const aeDotProof: Term = refl(Nat, numeral(14));
+export const cdCrossType: Term = eq(Nat, app(app(cross2, c), d), numeral(32));
+export const cdCrossProof: Term = refl(Nat, numeral(32));
+
+const aeMidpoint = app(app(midpoint, a), e);
+export const aeMidpointType: Term = eq(Point2, aeMidpoint, pair(numeral(3), numeral(5)));
+export const aeMidpointProof: Term = refl(Point2, pair(numeral(3), numeral(5)));

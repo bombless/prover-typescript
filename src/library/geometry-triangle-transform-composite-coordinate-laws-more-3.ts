@@ -1,0 +1,13 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd } from '../syntax/ast';
+import { Triangle2 } from './geometry-triangle';
+import { translate } from './geometry-transform';
+import { rotate90 } from './geometry-rotations';
+import { scaleVec } from './geometry-scalar';
+import { addTerm } from './nat';
+import { mulTerm } from './mul';
+export const Point2: Term = prod(Nat, Nat);
+const v1=(t:Term)=>fst(t); const v3=(t:Term)=>snd(snd(t));
+export const firstVertexScaleRotateTranslateXType: Term = pi(Nat, pi(Point2, pi(Triangle2, eq(Nat, fst(app(app(translate,app(rotate90,app(app(scaleVec,variable(2)),v1(variable(0))))),variable(1))), addTerm(mulTerm(variable(2),snd(v1(variable(0)))),fst(variable(1)))), 't'),'d'),'k');
+export const firstVertexScaleRotateTranslateXProof: Term = lambda(Nat,lambda(Point2,lambda(Triangle2,refl(Nat,addTerm(mulTerm(variable(2),snd(v1(variable(0)))),fst(variable(1)))),'t'),'d'),'k');
+export const thirdVertexScaleRotateTranslateYType: Term = pi(Nat, pi(Point2, pi(Triangle2, eq(Nat, snd(app(app(translate,app(rotate90,app(app(scaleVec,variable(2)),v3(variable(0))))),variable(1))), addTerm(mulTerm(variable(2),fst(v3(variable(0)))),snd(variable(1)))), 't'),'d'),'k');
+export const thirdVertexScaleRotateTranslateYProof: Term = lambda(Nat,lambda(Point2,lambda(Triangle2,refl(Nat,addTerm(mulTerm(variable(2),fst(v3(variable(0)))),snd(variable(1)))),'t'),'d'),'k');

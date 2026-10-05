@@ -1,0 +1,10 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd, pair } from '../syntax/ast';
+import { Triangle2 } from './geometry-triangle';
+import { midpoint } from './geometry-segment';
+import { translate } from './geometry-transform';
+import { rotate90 } from './geometry-rotations';
+import { addTerm } from './nat';
+export const Point2: Term = prod(Nat, Nat);
+const v1=(t:Term)=>fst(t); const v3=(t:Term)=>snd(snd(t)); const tr=(p:Term,d:Term)=>app(app(translate,app(rotate90,p)),d);
+export const firstThirdTransformedMidpointType: Term = pi(Point2, pi(Triangle2, eq(Point2, app(app(midpoint,tr(v1(variable(0)),variable(1))),tr(v3(variable(0)),variable(1))), pair(addTerm(snd(v1(variable(0))),fst(variable(1))),addTerm(fst(v3(variable(0))),snd(variable(1))))), 't'),'d');
+export const firstThirdTransformedMidpointProof: Term = lambda(Point2,lambda(Triangle2,refl(Point2,pair(addTerm(snd(v1(variable(0))),fst(variable(1))),addTerm(fst(v3(variable(0))),snd(variable(1))))),'t'),'d');

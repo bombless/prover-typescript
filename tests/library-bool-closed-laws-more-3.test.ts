@@ -1,0 +1,2 @@
+import test from 'node:test'; import { check } from '../src/kernel/typecheck'; import * as b from '../src/library/bool-closed-laws-more-3';
+test('more Boolean algebra laws are kernel checked',()=>{ check([],b.andAssociativeClosedProof,b.andAssociativeClosedType); check([],b.orAssociativeClosedProof,b.orAssociativeClosedType); check([],b.andCommutativeClosedProof,b.andCommutativeClosedType); check([],b.orCommutativeClosedProof,b.orCommutativeClosedType); check([],b.xorDoubleClosedProof,b.xorDoubleClosedType); check([],b.notNotClosedProof,b.notNotClosedType); });

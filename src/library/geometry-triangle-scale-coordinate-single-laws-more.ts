@@ -1,0 +1,12 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd } from '../syntax/ast';
+import { Triangle2 } from './geometry-triangle';
+import { scaleVec } from './geometry-scalar';
+import { mulTerm } from './mul';
+export const Point2: Term = prod(Nat, Nat);
+const v1=(t:Term)=>fst(t); const v2=(t:Term)=>fst(snd(t)); const v3=(t:Term)=>snd(snd(t));
+export const firstVertexScaledXType: Term = pi(Nat, pi(Triangle2, eq(Nat, fst(app(app(scaleVec,variable(1)),v1(variable(0)))), mulTerm(variable(1),fst(v1(variable(0))))), 't'),'k');
+export const firstVertexScaledXProof: Term = lambda(Nat,lambda(Triangle2,refl(Nat,mulTerm(variable(1),fst(v1(variable(0))))),'t'),'k');
+export const secondVertexScaledYType: Term = pi(Nat, pi(Triangle2, eq(Nat, snd(app(app(scaleVec,variable(1)),v2(variable(0)))), mulTerm(variable(1),snd(v2(variable(0))))), 't'),'k');
+export const secondVertexScaledYProof: Term = lambda(Nat,lambda(Triangle2,refl(Nat,mulTerm(variable(1),snd(v2(variable(0))))),'t'),'k');
+export const thirdVertexScaledXType: Term = pi(Nat, pi(Triangle2, eq(Nat, fst(app(app(scaleVec,variable(1)),v3(variable(0)))), mulTerm(variable(1),fst(v3(variable(0))))), 't'),'k');
+export const thirdVertexScaledXProof: Term = lambda(Nat,lambda(Triangle2,refl(Nat,mulTerm(variable(1),fst(v3(variable(0))))),'t'),'k');

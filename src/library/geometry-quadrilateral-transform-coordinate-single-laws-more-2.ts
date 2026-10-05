@@ -1,0 +1,11 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd } from '../syntax/ast';
+import { Quadrilateral2 } from './geometry-quadrilateral-four-stage-structure-laws-more';
+import { translate } from './geometry-transform';
+import { rotate90 } from './geometry-rotations';
+import { addTerm } from './nat';
+export const Point2: Term = prod(Nat, Nat);
+const first=(q:Term)=>fst(q); const third=(q:Term)=>fst(snd(snd(q)));
+export const thirdVertexTranslatedYType: Term = pi(Point2, pi(Quadrilateral2, eq(Nat, snd(app(app(translate,third(variable(0))),variable(1))), addTerm(snd(third(variable(0))),snd(variable(1)))), 'q'),'d');
+export const thirdVertexTranslatedYProof: Term = lambda(Point2,lambda(Quadrilateral2,refl(Nat,addTerm(snd(third(variable(0))),snd(variable(1)))),'q'),'d');
+export const firstVertexRotatedXType: Term = pi(Quadrilateral2, eq(Nat, fst(app(rotate90,first(variable(0)))), snd(first(variable(0)))), 'q');
+export const firstVertexRotatedXProof: Term = lambda(Quadrilateral2,refl(Nat,snd(first(variable(0)))),'q');

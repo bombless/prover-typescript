@@ -31,3 +31,8 @@ export const triangleCoordinateMetricBundleProof: Term = pair(
       pair(
         refl(Nat, numeral(25)),
         pair(refl(Nat, numeral(11)), refl(Nat, numeral(39)))))));
+
+export const triangleThirdVertexCoordinateType: Term = prod(
+  eq(Nat, fst(snd(snd(triangle))), numeral(5)),
+  eq(Nat, snd(snd(snd(triangle))), numeral(6)));
+export const triangleThirdVertexCoordinateProof: Term = pair(refl(Nat, numeral(5)), refl(Nat, numeral(6)));

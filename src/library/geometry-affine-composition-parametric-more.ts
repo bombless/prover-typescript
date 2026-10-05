@@ -22,3 +22,9 @@ export const rotateScaleTranslateSndType: Term = pi(Nat, pi(Point2, pi(Point2, p
     addTerm(mulTerm(variable(3), fst(variable(2))), fst(variable(1)))), 'd'), 'p'), 'k'), 'q');
 export const rotateScaleTranslateSndProof: Term = lambda(Nat, lambda(Point2, lambda(Point2, lambda(Point2,
   refl(Nat, addTerm(mulTerm(variable(3), fst(variable(2))), fst(variable(1)))), 'd'), 'p'), 'k'), 'q');
+
+export const rotateScaleTranslatePointType: Term = pi(Nat, pi(Point2, pi(Point2, pi(Point2,
+  eq(Point2, app(rotate90, app(app(translate, app(app(scaleVec, variable(3)), variable(2))), variable(1))),
+    { kind: 'Pair', left: addTerm(mulTerm(variable(3), snd(variable(2))), snd(variable(1))), right: addTerm(mulTerm(variable(3), fst(variable(2))), fst(variable(1))) }), 'd'), 'p'), 'k'), 'q');
+export const rotateScaleTranslatePointProof: Term = lambda(Nat, lambda(Point2, lambda(Point2, lambda(Point2,
+  refl(Point2, { kind: 'Pair', left: addTerm(mulTerm(variable(3), snd(variable(2))), snd(variable(1))), right: addTerm(mulTerm(variable(3), fst(variable(2))), fst(variable(1))) }), 'd'), 'p'), 'k'), 'q');

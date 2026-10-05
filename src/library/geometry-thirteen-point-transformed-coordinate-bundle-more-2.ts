@@ -1,0 +1,10 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd } from '../syntax/ast';
+import { Chain13 } from './geometry-thirteen-point-chain-eta-more';
+import { translate } from './geometry-transform';
+import { addTerm } from './nat';
+const p13=(q:Term)=>snd(snd(snd(snd(snd(snd(snd(snd(snd(snd(snd(snd(q))))))))))));
+export const Point2: Term = prod(Nat, Nat);
+export const thirteenthTranslatedYType: Term = pi(Point2, pi(Chain13, eq(Nat, snd(app(app(translate,p13(variable(0))),variable(1))), addTerm(snd(p13(variable(0))),snd(variable(1)))), 'c'),'d');
+export const thirteenthTranslatedYProof: Term = lambda(Point2,lambda(Chain13,refl(Nat,addTerm(snd(p13(variable(0))),snd(variable(1)))),'c'),'d');
+export const thirteenthTranslatedXType: Term = pi(Point2, pi(Chain13, eq(Nat, fst(app(app(translate,p13(variable(0))),variable(1))), addTerm(fst(p13(variable(0))),fst(variable(1)))), 'c'),'d');
+export const thirteenthTranslatedXProof: Term = lambda(Point2,lambda(Chain13,refl(Nat,addTerm(fst(p13(variable(0))),fst(variable(1)))),'c'),'d');

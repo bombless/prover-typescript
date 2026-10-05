@@ -1,5 +1,5 @@
 import { Term, Nat, prod, pair, fst, snd, variable, lambda, pi, app, eq, refl, Type } from '../syntax/ast';
-import { addTerm } from './nat';
+import { addTerm, numeral } from './nat';
 import { addCommProof } from './add-comm';
 import { addAssocProof } from './add-assoc';
 import { initialProofState } from '../proof/state';
@@ -67,5 +67,15 @@ export const addVecAssocProof: Term = addVecAssocSession.proof();
 export const vectorEtaType: Term = pi(Vec2,
   eq(Vec2, pair(fst(variable(0)), snd(variable(0))), variable(0)), 'v');
 export const vectorEtaProof: Term = lambda(Vec2, refl(Vec2, variable(0)), 'v');
+
+/** Vector addition is closed under the zero vector on the left in this model. */
+export const addZeroVecLeftType: Term = pi(Vec2,
+  eq(Vec2, app(app(addVec2, zeroVec), variable(0)), variable(0)), 'v');
+export const addZeroVecLeftProof: Term = lambda(Vec2, refl(Vec2, variable(0)), 'v');
+
+export const addVecConcreteType: Term = eq(Vec2,
+  app(app(addVec2, pair(numeral(6), numeral(1))), pair(numeral(2), numeral(8))),
+  pair(numeral(8), numeral(9)));
+export const addVecConcreteProof: Term = refl(Vec2, pair(numeral(8), numeral(9)));
 
 /** Left zero is definitionally transparent because Nat.add recurses on its first coordinate argument. */

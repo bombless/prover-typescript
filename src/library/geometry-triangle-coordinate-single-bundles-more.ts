@@ -1,0 +1,15 @@
+import { Term, Nat, prod, variable, pi, lambda, eq, refl, fst, snd } from '../syntax/ast';
+import { Triangle2 } from './geometry-triangle';
+export const Point2: Term = prod(Nat, Nat);
+export const firstVertexXType: Term = pi(Triangle2, eq(Nat, fst(fst(variable(0))), fst(fst(variable(0)))), 't');
+export const firstVertexXProof: Term = lambda(Triangle2, refl(Nat, fst(fst(variable(0)))), 't');
+export const firstVertexYType: Term = pi(Triangle2, eq(Nat, snd(fst(variable(0))), snd(fst(variable(0)))), 't');
+export const firstVertexYProof: Term = lambda(Triangle2, refl(Nat, snd(fst(variable(0)))), 't');
+export const secondVertexXType: Term = pi(Triangle2, eq(Nat, fst(fst(snd(variable(0)))), fst(fst(snd(variable(0))))), 't');
+export const secondVertexXProof: Term = lambda(Triangle2, refl(Nat, fst(fst(snd(variable(0))))), 't');
+export const secondVertexYType: Term = pi(Triangle2, eq(Nat, snd(fst(snd(variable(0)))), snd(fst(snd(variable(0))))), 't');
+export const secondVertexYProof: Term = lambda(Triangle2, refl(Nat, snd(fst(snd(variable(0))))), 't');
+export const thirdVertexXType: Term = pi(Triangle2, eq(Nat, fst(snd(snd(variable(0)))), fst(snd(snd(variable(0))))), 't');
+export const thirdVertexXProof: Term = lambda(Triangle2, refl(Nat, fst(snd(snd(variable(0))))), 't');
+export const thirdVertexYType: Term = pi(Triangle2, eq(Nat, snd(snd(snd(variable(0)))), snd(snd(snd(variable(0))))), 't');
+export const thirdVertexYProof: Term = lambda(Triangle2, refl(Nat, snd(snd(snd(variable(0))))), 't');

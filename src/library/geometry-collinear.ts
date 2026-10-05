@@ -25,5 +25,26 @@ export const directionSndType: Term = pi(Point2, pi(Point2,
   eq(Nat, snd(app(app(direction, variable(1)), variable(0))), snd(variable(1))), 'q'), 'p');
 export const directionSndProof: Term = lambda(Point2,
   lambda(Point2, refl(Nat, snd(variable(1))), 'q'), 'p');
+
+/** Direction is reconstructed exactly from its projected coordinates. */
+export const directionEtaType: Term = pi(Point2, pi(Point2,
+  eq(Point2,
+    pair(fst(app(app(direction, variable(1)), variable(0))), snd(app(app(direction, variable(1)), variable(0)))),
+    app(app(direction, variable(1)), variable(0))), 'q'), 'p');
+export const directionEtaProof: Term = lambda(Point2,
+  lambda(Point2, refl(Point2, app(app(direction, variable(1)), variable(0))), 'q'), 'p');
+
+/** The direction of the origin is the origin. */
+export const originDirectionType: Term = eq(Point2,
+  app(app(direction, pair({ kind: 'Zero' }, { kind: 'Zero' })), pair(numeral(4), numeral(7))),
+  pair({ kind: 'Zero' }, { kind: 'Zero' }));
+export const originDirectionProof: Term = refl(Point2, pair({ kind: 'Zero' }, { kind: 'Zero' }));
+
+/** A concrete direction projection certificate used by downstream examples. */
+export const concreteDirectionType: Term = eq(Point2,
+  app(app(direction, pair(numeral(3), numeral(5))), pair(numeral(8), numeral(2))),
+  pair(numeral(3), numeral(5)));
+export const concreteDirectionProof: Term = refl(Point2, pair(numeral(3), numeral(5)));
+
 export const collinearConcreteType: Term = eq(Nat, { kind: 'Zero' }, { kind: 'Zero' });
 export const collinearConcreteProof: Term = refl(Nat, { kind: 'Zero' });

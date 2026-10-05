@@ -77,4 +77,9 @@ export const scaleConcreteProof: Term = refl(Vec2,
 export const scaleConcreteTwoType: Term = eq(Vec2, app(app(scaleVec, numeral(2)), pair(numeral(2), numeral(3))), pair(numeral(4), numeral(6)));
 export const scaleConcreteTwoProof: Term = refl(Vec2, pair(numeral(4), numeral(6)));
 
+/** Scaling by two doubles both coordinates in the current Nat algebra. */
+export const scaleConcreteThreeType: Term = eq(Vec2, app(app(scaleVec, numeral(3)), pair(numeral(2), numeral(4))), pair(numeral(6), numeral(12)));
+export const scaleConcreteThreeProof: Term = refl(Vec2, pair(numeral(6), numeral(12)));
+
+
 /** Concrete scaling computes coordinatewise. */

@@ -1,0 +1,18 @@
+import { Term, Nat, Bool, True, False, Zero, succ, variable, pi, lambda, eq, refl, app } from '../syntax/ast';
+import { isZero, parity } from './nat-predicates';
+const n = variable(0);
+const natN = (count: number, base: Term = Zero): Term => { let x = base; for (let i = 0; i < count; i++) x = succ(x); return x; };
+const iz = (v: Term, r: Term): Term => eq(Bool, app(isZero, v), r);
+const pa = (v: Term, r: Term): Term => eq(Bool, app(parity, v), r);
+export const isZeroSuccSevenType: Term = pi(Nat, iz(natN(7, n), False), 'n');
+export const isZeroSuccSevenProof: Term = lambda(Nat, refl(Bool, False), 'n');
+export const isZeroSuccEightType: Term = pi(Nat, iz(natN(8, n), False), 'n');
+export const isZeroSuccEightProof: Term = lambda(Nat, refl(Bool, False), 'n');
+export const parityNineType: Term = pa(natN(9), False);
+export const parityNineProof: Term = refl(Bool, False);
+export const parityTenType: Term = pa(natN(10), True);
+export const parityTenProof: Term = refl(Bool, True);
+export const parityElevenType: Term = pa(natN(11), False);
+export const parityElevenProof: Term = refl(Bool, False);
+export const parityTwelveType: Term = pa(natN(12), True);
+export const parityTwelveProof: Term = refl(Bool, True);

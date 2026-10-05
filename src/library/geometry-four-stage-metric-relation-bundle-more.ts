@@ -1,0 +1,43 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { scaleVec } from './geometry-scalar';
+import { rotate90 } from './geometry-rotations';
+import { reflectX } from './geometry-reflections';
+import { translate } from './geometry-transform';
+import { normSq, dot2 } from './geometry-metrics';
+import { cross2 } from './geometry-cross';
+import { distanceSq } from './geometry-distance';
+import { midpoint } from './geometry-segment';
+import { onCircle } from './geometry-circle';
+import { incidence } from './geometry-incidence';
+import { onVerticalLine } from './geometry-line';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+const transform = (k: Term, p: Term, d: Term): Term =>
+  app(app(translate, app(reflectX, app(rotate90, app(app(scaleVec, k), p)))), d);
+const u = transform(numeral(3), pair(numeral(1), numeral(2)), pair(numeral(2), numeral(1)));
+const v = transform(numeral(2), pair(numeral(2), numeral(1)), pair(numeral(2), numeral(1)));
+const line = pair(pair(numeral(8), numeral(0)), pair(numeral(1), numeral(0)));
+
+export const uType: Term = eq(Point2, u, pair(numeral(8), numeral(4)));
+export const uProof: Term = refl(Point2, pair(numeral(8), numeral(4)));
+export const vType: Term = eq(Point2, v, pair(numeral(4), numeral(5)));
+export const vProof: Term = refl(Point2, pair(numeral(4), numeral(5)));
+export const uNormType: Term = eq(Nat, app(normSq, u), numeral(80));
+export const uNormProof: Term = refl(Nat, numeral(80));
+export const vNormType: Term = eq(Nat, app(normSq, v), numeral(41));
+export const vNormProof: Term = refl(Nat, numeral(41));
+export const uvDotType: Term = eq(Nat, app(app(dot2, u), v), numeral(52));
+export const uvDotProof: Term = refl(Nat, numeral(52));
+export const uvCrossType: Term = eq(Nat, app(app(cross2, u), v), numeral(56));
+export const uvCrossProof: Term = refl(Nat, numeral(56));
+export const uvDistanceType: Term = eq(Nat, app(app(distanceSq, u), v), numeral(52));
+export const uvDistanceProof: Term = refl(Nat, numeral(52));
+export const uvMidpointType: Term = eq(Point2, app(app(midpoint, u), v), pair(numeral(8), numeral(5)));
+export const uvMidpointProof: Term = refl(Point2, pair(numeral(8), numeral(5)));
+export const uCircleType: Term = app(app(onCircle, u), pair(u, numeral(80)));
+export const uCircleProof: Term = refl(Nat, numeral(80));
+export const uIncidenceType: Term = app(app(incidence, u), line);
+export const uIncidenceProof: Term = refl(Nat, numeral(8));
+export const uVerticalType: Term = app(app(onVerticalLine, u), numeral(8));
+export const uVerticalProof: Term = refl(Nat, numeral(8));

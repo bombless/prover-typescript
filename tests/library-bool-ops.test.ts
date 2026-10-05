@@ -1,6 +1,6 @@
 import test from 'node:test';
 import { check } from '../src/kernel/typecheck';
-import { boolAnd, boolAndType, boolOr, boolOrType, trueAndTrueProof, trueAndTrueType, falseAndTrueProof, falseAndTrueType, falseOrFalseProof, falseOrFalseType, trueOrFalseProof, trueOrFalseType, trueAndFalseProof, trueAndFalseType, falseOrTrueProof, falseOrTrueType, falseAndFalseProof, falseAndFalseType, trueOrTrueProof, trueOrTrueType } from '../src/library/bool-ops';
+import { boolAnd, boolAndType, boolOr, boolOrType, trueAndTrueProof, trueAndTrueType, falseAndTrueProof, falseAndTrueType, falseOrFalseProof, falseOrFalseType, trueOrFalseProof, trueOrFalseType, trueAndFalseProof, trueAndFalseType, falseOrTrueProof, falseOrTrueType, falseAndFalseProof, falseAndFalseType, trueOrTrueProof, trueOrTrueType, andOrMixedProof, andOrMixedType, orAndMixedProof, orAndMixedType } from '../src/library/bool-ops';
 
 test('boolean conjunction and disjunction are kernel checked', () => {
   check([], boolAnd, boolAndType);
@@ -13,4 +13,6 @@ test('boolean conjunction and disjunction are kernel checked', () => {
   check([], falseOrTrueProof, falseOrTrueType);
   check([], falseAndFalseProof, falseAndFalseType);
   check([], trueOrTrueProof, trueOrTrueType);
+  check([], andOrMixedProof, andOrMixedType);
+  check([], orAndMixedProof, orAndMixedType);
 });

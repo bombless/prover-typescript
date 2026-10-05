@@ -24,3 +24,14 @@ export const addSuccTripleType: Term = pi(Nat, pi(Nat,
     succ(succ(succ(addTerm(variable(1), variable(0)))))), 'm'), 'n');
 export const addSuccTripleProof: Term = lambda(Nat, lambda(Nat,
   refl(Nat, succ(succ(succ(addTerm(variable(1), variable(0)))))), 'm'), 'n');
+
+/** Adding zero on the left is an explicit reusable theorem alias. */
+export const addLeftZeroAliasType: Term = pi(Nat, eq(Nat, addTerm(Zero, variable(0)), variable(0)), 'n');
+export const addLeftZeroAliasProof: Term = lambda(Nat, refl(Nat, variable(0)), 'n');
+
+/** Three nested successor additions normalize predictably. */
+export const addSuccFourType: Term = pi(Nat, pi(Nat,
+  eq(Nat, addTerm(succ(succ(succ(succ(variable(1))))), variable(0)),
+    succ(succ(succ(succ(addTerm(variable(1), variable(0))))))), 'm'), 'n');
+export const addSuccFourProof: Term = lambda(Nat, lambda(Nat,
+  refl(Nat, succ(succ(succ(succ(addTerm(variable(1), variable(0))))))), 'm'), 'n');

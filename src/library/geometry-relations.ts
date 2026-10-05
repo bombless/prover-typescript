@@ -18,3 +18,16 @@ export const samePointType: Term = pi(Vec2, pi(Vec2, Bool, 'q'), 'p');
 /** Same-point relation is reflexive for every vector. */
 export const samePointReflType: Term = pi(Vec2, app(app(samePoint, variable(0)), variable(0)), 'p');
 export const samePointReflProof: Term = lambda(Vec2, refl(Vec2, variable(0)), 'p');
+
+/** Every vector is perpendicular to the zero vector in the current Nat model. */
+export const zeroPerpendicularType: Term = pi(Vec2,
+  app(app(perpendicularVec, pair({ kind: 'Zero' }, { kind: 'Zero' })), variable(0)), 'v');
+export const zeroPerpendicularProof: Term = lambda(Vec2, refl(Nat, { kind: 'Zero' }), 'v');
+
+/** The coordinate axes give a concrete perpendicularity certificate. */
+export const axisPerpendicularType: Term = app(app(perpendicularVec, axisX), axisY);
+export const axisPerpendicularProof: Term = refl(Nat, { kind: 'Zero' });
+
+/** Equality of a point with itself is a reusable same-point certificate. */
+export const samePointClosedType: Term = app(app(samePoint, pair({ kind: 'Zero' }, { kind: 'Zero' })), pair({ kind: 'Zero' }, { kind: 'Zero' }));
+export const samePointClosedProof: Term = refl(Vec2, pair({ kind: 'Zero' }, { kind: 'Zero' }));

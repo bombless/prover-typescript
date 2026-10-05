@@ -1,0 +1,11 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd } from '../syntax/ast';
+import { Triangle2 } from './geometry-triangle';
+import { reflectX } from './geometry-reflections';
+export const Point2: Term = prod(Nat, Nat);
+const v1=(t:Term)=>fst(t); const v2=(t:Term)=>fst(snd(t)); const v3=(t:Term)=>snd(snd(t));
+export const firstVertexReflectedXType: Term = pi(Triangle2, eq(Nat, fst(app(reflectX,v1(variable(0)))), fst(v1(variable(0)))), 't');
+export const firstVertexReflectedXProof: Term = lambda(Triangle2, refl(Nat, fst(v1(variable(0)))), 't');
+export const secondVertexReflectedYType: Term = pi(Triangle2, eq(Nat, snd(app(reflectX,v2(variable(0)))), snd(v2(variable(0)))), 't');
+export const secondVertexReflectedYProof: Term = lambda(Triangle2, refl(Nat, snd(v2(variable(0)))), 't');
+export const thirdVertexReflectedXType: Term = pi(Triangle2, eq(Nat, fst(app(reflectX,v3(variable(0)))), fst(v3(variable(0)))), 't');
+export const thirdVertexReflectedXProof: Term = lambda(Triangle2, refl(Nat, fst(v3(variable(0)))), 't');

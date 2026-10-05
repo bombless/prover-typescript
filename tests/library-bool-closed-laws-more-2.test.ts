@@ -1,0 +1,2 @@
+import test from 'node:test'; import { check } from '../src/kernel/typecheck'; import * as b from '../src/library/bool-closed-laws-more-2';
+test('more closed Boolean laws are kernel checked',()=>{ check([],b.consensusProof,b.consensusType); check([],b.absorptionAndProof,b.absorptionAndType); check([],b.absorptionOrProof,b.absorptionOrType); check([],b.xorNotProof,b.xorNotType); check([],b.nestedNotXorProof,b.nestedNotXorType); check([],b.distributiveClosedProof,b.distributiveClosedType); });

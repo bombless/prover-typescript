@@ -1,0 +1,12 @@
+import { Term, Bool, True, False, app, eq, refl } from '../syntax/ast';
+import { boolAnd, boolOr } from './bool-ops';
+import { boolNot } from './bool';
+import { boolXor } from './bool-xor';
+const e=(a:Term,b:Term):Term=>eq(Bool,a,b);
+const n=(x:Term):Term=>app(boolNot,x); const a=(x:Term,y:Term):Term=>app(app(boolAnd,x),y); const o=(x:Term,y:Term):Term=>app(app(boolOr,x),y); const x=(p:Term,q:Term):Term=>app(app(boolXor,p),q);
+export const consensusType=e(o(a(True,False),a(True,True)),True); export const consensusProof=refl(Bool,True);
+export const absorptionAndType=e(a(True,o(True,False)),True); export const absorptionAndProof=refl(Bool,True);
+export const absorptionOrType=e(o(False,a(False,True)),False); export const absorptionOrProof=refl(Bool,False);
+export const xorNotType=e(x(False,True),True); export const xorNotProof=refl(Bool,True);
+export const nestedNotXorType=e(n(x(True,False)),False); export const nestedNotXorProof=refl(Bool,False);
+export const distributiveClosedType=e(a(True,o(False,True)),o(a(True,False),a(True,True))); export const distributiveClosedProof=refl(Bool,True);

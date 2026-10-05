@@ -49,3 +49,7 @@ export const lineConcreteEtaType: Term = eq(Line2,
   pair(fst(pair(pair(numeral(2), numeral(3)), pair(numeral(1), numeral(0)))), snd(pair(pair(numeral(2), numeral(3)), pair(numeral(1), numeral(0))))),
   pair(pair(numeral(2), numeral(3)), pair(numeral(1), numeral(0))));
 export const lineConcreteEtaProof: Term = refl(Line2, pair(pair(numeral(2), numeral(3)), pair(numeral(1), numeral(0))));
+
+/** A concrete point lies on the vertical line with matching x coordinate. */
+export const concreteVerticalIncidenceType: Term = app(app(onVerticalLine, pair(numeral(6), numeral(9))), numeral(6));
+export const concreteVerticalIncidenceProof: Term = refl(Nat, numeral(6));

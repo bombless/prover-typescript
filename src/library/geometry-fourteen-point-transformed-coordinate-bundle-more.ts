@@ -1,0 +1,10 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd } from '../syntax/ast';
+import { Chain14 } from './geometry-fourteen-fifteen-point-chain-eta-more';
+import { translate } from './geometry-transform';
+import { addTerm } from './nat';
+const p14=(q:Term)=>snd(snd(snd(snd(snd(snd(snd(snd(snd(snd(snd(snd(snd(q)))))))))))));
+export const Point2: Term = prod(Nat, Nat);
+export const fourteenthTranslatedXType: Term = pi(Point2, pi(Chain14, eq(Nat, fst(app(app(translate,p14(variable(0))),variable(1))), addTerm(fst(p14(variable(0))),fst(variable(1)))), 'c'),'d');
+export const fourteenthTranslatedXProof: Term = lambda(Point2,lambda(Chain14,refl(Nat,addTerm(fst(p14(variable(0))),fst(variable(1)))),'c'),'d');
+export const fourteenthTranslatedYType: Term = pi(Point2, pi(Chain14, eq(Nat, snd(app(app(translate,p14(variable(0))),variable(1))), addTerm(snd(p14(variable(0))),snd(variable(1)))), 'c'),'d');
+export const fourteenthTranslatedYProof: Term = lambda(Point2,lambda(Chain14,refl(Nat,addTerm(snd(p14(variable(0))),snd(variable(1)))),'c'),'d');

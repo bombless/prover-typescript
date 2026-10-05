@@ -14,4 +14,7 @@ test('five point relation certificates are kernel checked', () => {
   check([], c.cCircleProof, c.cCircleType);
   check([], c.dIncidenceProof, c.dIncidenceType);
   check([], c.eVerticalProof, c.eVerticalType);
+  check([], c.bNormProof, c.bNormType); check([], c.dNormProof, c.dNormType);
+  check([], c.aeDotProof, c.aeDotType); check([], c.cdCrossProof, c.cdCrossType);
+  check([], c.aeMidpointProof, c.aeMidpointType);
 });

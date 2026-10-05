@@ -1,0 +1,10 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd } from '../syntax/ast';
+import { Chain10 } from './geometry-ten-point-chain-eta-more';
+import { translate } from './geometry-transform';
+import { addTerm } from './nat';
+const p10=(q:Term)=>snd(snd(snd(snd(snd(snd(snd(snd(snd(q)))))))));
+export const Point2: Term = prod(Nat, Nat);
+export const tenthTranslatedYType: Term = pi(Point2, pi(Chain10, eq(Nat, snd(app(app(translate,p10(variable(0))),variable(1))), addTerm(snd(p10(variable(0))),snd(variable(1)))), 'c'),'d');
+export const tenthTranslatedYProof: Term = lambda(Point2,lambda(Chain10,refl(Nat,addTerm(snd(p10(variable(0))),snd(variable(1)))),'c'),'d');
+export const tenthTranslatedXType: Term = pi(Point2, pi(Chain10, eq(Nat, fst(app(app(translate,p10(variable(0))),variable(1))), addTerm(fst(p10(variable(0))),fst(variable(1)))), 'c'),'d');
+export const tenthTranslatedXProof: Term = lambda(Point2,lambda(Chain10,refl(Nat,addTerm(fst(p10(variable(0))),fst(variable(1)))),'c'),'d');

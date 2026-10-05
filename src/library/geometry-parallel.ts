@@ -1,5 +1,6 @@
 import { Term, Nat, prod, pair, fst, snd, variable, pi, lambda, app, eq, refl } from '../syntax/ast';
 import { cross2 } from './geometry-cross';
+import { numeral } from './nat';
 
 export const Vec2: Term = prod(Nat, Nat);
 export const parallelVec: Term = lambda(Vec2, lambda(Vec2,
@@ -12,3 +13,6 @@ export const sameAxisProof: Term = refl(Nat, { kind: 'Zero' });
 export const zeroParallelType: Term = pi(Vec2,
   eq(Nat, app(app(cross2, pair({ kind: 'Zero' }, { kind: 'Zero' })), variable(0)), { kind: 'Zero' }), 'v');
 export const zeroParallelProof: Term = lambda(Vec2, refl(Nat, { kind: 'Zero' }), 'v');
+
+export const axisParallelType: Term = app(app(parallelVec, pair(numeral(2), { kind: 'Zero' })), pair(numeral(5), { kind: 'Zero' }));
+export const axisParallelProof: Term = refl(Nat, { kind: 'Zero' });

@@ -1,0 +1,23 @@
+import { Term, Nat, Zero, app, eq, refl, succ } from '../syntax/ast';
+import { numeral, addTerm } from './nat';
+import { mulTerm } from './mul';
+import { powTerm } from './pow';
+import { pred } from './pred';
+import { sub } from './sub';
+
+export const addType: Term = eq(Nat, addTerm(numeral(321), numeral(123)), numeral(444));
+export const addProof: Term = refl(Nat, numeral(444));
+export const mulType: Term = eq(Nat, mulTerm(numeral(18), numeral(12)), numeral(216));
+export const mulProof: Term = refl(Nat, numeral(216));
+export const powType: Term = eq(Nat, powTerm(numeral(2), numeral(9)), numeral(512));
+export const powProof: Term = refl(Nat, numeral(512));
+export const predType: Term = eq(Nat, app(pred, numeral(1000)), numeral(999));
+export const predProof: Term = refl(Nat, numeral(999));
+export const subType: Term = eq(Nat, app(app(sub, numeral(500)), numeral(275)), numeral(225));
+export const subProof: Term = refl(Nat, numeral(225));
+export const nestedType: Term = eq(Nat, addTerm(mulTerm(numeral(7), numeral(8)), app(app(sub, numeral(90)), numeral(13))), numeral(133));
+export const nestedProof: Term = refl(Nat, numeral(133));
+export const underflowType: Term = eq(Nat, app(app(sub, numeral(12)), numeral(40)), Zero);
+export const underflowProof: Term = refl(Nat, Zero);
+export const successorType: Term = eq(Nat, succ(mulTerm(numeral(9), numeral(9))), numeral(82));
+export const successorProof: Term = refl(Nat, numeral(82));

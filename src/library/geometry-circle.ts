@@ -27,3 +27,12 @@ export const circleRadiusProof: Term = lambda(Circle2, refl(Nat, snd(variable(0)
 export const circleEtaType: Term = pi(Circle2,
   eq(Circle2, pair(fst(variable(0)), snd(variable(0))), variable(0)), 'c');
 export const circleEtaProof: Term = lambda(Circle2, refl(Circle2, variable(0)), 'c');
+
+/** A concrete zero-radius circle membership certificate. */
+export const concreteZeroCircleType: Term = app(app(onCircle, pair({ kind: 'Zero' }, { kind: 'Zero' })), originCircle);
+export const concreteZeroCircleProof: Term = refl(Nat, { kind: 'Zero' });
+
+/** Circle reconstruction from projections for a concrete circle. */
+export const concreteCircleEtaType: Term = eq(Circle2,
+  pair(fst(originCircle), snd(originCircle)), originCircle);
+export const concreteCircleEtaProof: Term = refl(Circle2, originCircle);

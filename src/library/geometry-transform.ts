@@ -62,4 +62,10 @@ export const translateEtaType: Term = pi(Vec2, pi(Vec2,
 export const translateEtaProof: Term = lambda(Vec2,
   lambda(Vec2, refl(Vec2, app(app(translate, variable(1)), variable(0))), 'delta'), 'p');
 
+/** Translating the origin yields exactly the displacement. */
+export const translateOriginGeneralType: Term = pi(Vec2,
+  eq(Vec2, app(app(translate, pair({ kind: 'Zero' }, { kind: 'Zero' })), variable(0)), variable(0)), 'd');
+export const translateOriginGeneralProof: Term = lambda(Vec2,
+  refl(Vec2, variable(0)), 'd');
+
 /** Translating a point by a zero displacement has zero output coordinates. */

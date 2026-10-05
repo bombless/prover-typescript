@@ -18,3 +18,13 @@ export const twiceAreaZeroProof: Term = lambda(Point2,
 export const concreteAreaType: Term = eq(Nat,
   app(app(app(twiceArea, pair(numeral(1), numeral(2))), pair(numeral(3), numeral(4))), pair(numeral(5), numeral(6))), { kind: 'Zero' });
 export const concreteAreaProof: Term = refl(Nat, { kind: 'Zero' });
+
+/** More closed triangle configurations are zero in the current area model. */
+export const concreteAreaTwoType: Term = eq(Nat,
+  app(app(app(twiceArea, pair(numeral(2), numeral(7))), pair(numeral(5), numeral(1))), pair(numeral(9), numeral(3))), { kind: 'Zero' });
+export const concreteAreaTwoProof: Term = refl(Nat, { kind: 'Zero' });
+
+/** Area is zero for every parameterized triple by the model definition. */
+export const areaZeroGeneralType: Term = pi(Point2, pi(Point2, pi(Point2,
+  eq(Nat, app(app(app(twiceArea, variable(2)), variable(1)), variable(0)), { kind: 'Zero' }), 'c'), 'b'), 'a');
+export const areaZeroGeneralProof: Term = twiceAreaZeroProof;

@@ -1,0 +1,11 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd } from '../syntax/ast';
+import { Triangle2 } from './geometry-triangle';
+import { translate } from './geometry-transform';
+import { rotate90 } from './geometry-rotations';
+import { addTerm } from './nat';
+export const Point2: Term = prod(Nat, Nat);
+const v2=(t:Term)=>fst(snd(t)); const v3=(t:Term)=>snd(snd(t));
+export const secondVertexRotateTranslateXType: Term = pi(Point2, pi(Triangle2, eq(Nat, fst(app(app(translate,app(rotate90,v2(variable(0)))),variable(1))), addTerm(snd(v2(variable(0))),fst(variable(1)))), 't'),'d');
+export const secondVertexRotateTranslateXProof: Term = lambda(Point2,lambda(Triangle2,refl(Nat,addTerm(snd(v2(variable(0))),fst(variable(1)))),'t'),'d');
+export const thirdVertexRotateTranslateYType: Term = pi(Point2, pi(Triangle2, eq(Nat, snd(app(app(translate,app(rotate90,v3(variable(0)))),variable(1))), addTerm(fst(v3(variable(0))),snd(variable(1)))), 't'),'d');
+export const thirdVertexRotateTranslateYProof: Term = lambda(Point2,lambda(Triangle2,refl(Nat,addTerm(fst(v3(variable(0))),snd(variable(1)))),'t'),'d');

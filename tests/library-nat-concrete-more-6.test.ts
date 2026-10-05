@@ -1,0 +1,2 @@
+import test from 'node:test'; import { check } from '../src/kernel/typecheck'; import * as n from '../src/library/nat-concrete-more-6';
+test('more concrete Nat laws are kernel checked',()=>{check([],n.addFiftySixSeventeenProof,n.addFiftySixSeventeenType);check([],n.mulElevenSixProof,n.mulElevenSixType);check([],n.powTwoSevenProof,n.powTwoSevenType);check([],n.predFiftyProof,n.predFiftyType);check([],n.subThirtyFiveProof,n.subThirtyFiveType);check([],n.mixedNatProof,n.mixedNatType);check([],n.zeroMinusLargeProof,n.zeroMinusLargeType);});

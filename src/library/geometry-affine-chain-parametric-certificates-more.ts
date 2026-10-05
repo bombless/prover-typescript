@@ -28,3 +28,16 @@ export const reflectTranslatePointType: Term = pi(Point2, pi(Point2,
     app(app(translate, variable(1)), variable(0))), 'd'), 'p');
 export const reflectTranslatePointProof: Term = lambda(Point2, lambda(Point2,
   refl(Point2, app(app(translate, variable(1)), variable(0))), 'd'), 'p');
+
+/** The full rotate-scale-translate chain exposes each output coordinate. */
+export const rotateScaleTranslateFstType: Term = pi(Nat, pi(Point2, pi(Point2,
+  eq(Nat, fst(app(rotate90, app(app(translate, app(app(scaleVec, variable(2)), variable(1))), variable(0)))),
+    addTerm(mulTerm(variable(2), snd(variable(1))), snd(variable(0)))), 'd'), 'p'), 'k');
+export const rotateScaleTranslateFstProof: Term = lambda(Nat, lambda(Point2, lambda(Point2,
+  refl(Nat, addTerm(mulTerm(variable(2), snd(variable(1))), snd(variable(0)))), 'd'), 'p'), 'k');
+
+export const rotateScaleTranslateSndType: Term = pi(Nat, pi(Point2, pi(Point2,
+  eq(Nat, snd(app(rotate90, app(app(translate, app(app(scaleVec, variable(2)), variable(1))), variable(0)))),
+    addTerm(mulTerm(variable(2), fst(variable(1))), fst(variable(0)))), 'd'), 'p'), 'k');
+export const rotateScaleTranslateSndProof: Term = lambda(Nat, lambda(Point2, lambda(Point2,
+  refl(Nat, addTerm(mulTerm(variable(2), fst(variable(1))), fst(variable(0)))), 'd'), 'p'), 'k');

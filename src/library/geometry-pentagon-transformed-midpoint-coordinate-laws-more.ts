@@ -1,0 +1,11 @@
+import { Term, Nat, prod, variable, pi, lambda, app, eq, refl, fst, snd, pair } from '../syntax/ast';
+import { Pentagon2 } from './geometry-pentagon-parametric-structure-bundle-more';
+import { midpoint } from './geometry-segment';
+import { translate } from './geometry-transform';
+import { rotate90 } from './geometry-rotations';
+import { addTerm } from './nat';
+export const Point2: Term = prod(Nat, Nat);
+const first=(q:Term)=>fst(q); const fifth=(q:Term)=>snd(snd(snd(snd(q))));
+const tr=(p:Term,d:Term)=>app(app(translate,app(rotate90,p)),d);
+export const firstFifthTransformedMidpointType: Term = pi(Point2, pi(Pentagon2, eq(Point2, app(app(midpoint,tr(first(variable(0)),variable(1))),tr(fifth(variable(0)),variable(1))), pair(addTerm(snd(first(variable(0))),fst(variable(1))),addTerm(fst(fifth(variable(0))),snd(variable(1))))), 'p'),'d');
+export const firstFifthTransformedMidpointProof: Term = lambda(Point2,lambda(Pentagon2,refl(Point2,pair(addTerm(snd(first(variable(0))),fst(variable(1))),addTerm(fst(fifth(variable(0))),snd(variable(1))))),'p'),'d');

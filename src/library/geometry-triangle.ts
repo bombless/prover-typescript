@@ -82,3 +82,14 @@ export const triangleConcreteEtaType: Term = eq(Triangle2,
   pair(pair(numeral(1), numeral(2)), pair(pair(numeral(3), numeral(4)), pair(numeral(5), numeral(6)))));
 export const triangleConcreteEtaProof: Term = refl(Triangle2,
   pair(pair(numeral(1), numeral(2)), pair(pair(numeral(3), numeral(4)), pair(numeral(5), numeral(6)))));
+
+/** Parameterized triangle vertex reconstruction. */
+export const triangleVerticesType: Term = pi(Triangle2,
+  eq(Triangle2,
+    pair(fst(variable(0)), pair(fst(snd(variable(0))), snd(snd(variable(0))))), variable(0)), 't');
+export const triangleVerticesProof: Term = triangleEtaProof;
+
+/** A concrete triangle edge endpoint projection. */
+export const triangleConcreteEdgeDistanceType: Term = eq(Nat,
+  app(app(distanceSq, pair(numeral(1), numeral(2))), pair(numeral(3), numeral(4))), numeral(11));
+export const triangleConcreteEdgeDistanceProof: Term = refl(Nat, numeral(11));

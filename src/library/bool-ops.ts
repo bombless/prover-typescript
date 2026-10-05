@@ -63,3 +63,11 @@ export const trueAndTrueInputType: Term = eq(Bool, app(app(boolAnd, True), True)
 export const trueAndTrueInputProof: Term = refl(Bool, True);
 export const falseOrFalseInputType: Term = eq(Bool, app(app(boolOr, False), False), False);
 export const falseOrFalseInputProof: Term = refl(Bool, False);
+
+/** Concrete mixed conjunction/disjunction chains normalize to constructors. */
+export const andOrMixedType: Term = eq(Bool,
+  app(app(boolAnd, app(app(boolOr, False), True)), app(app(boolOr, False), False)), False);
+export const andOrMixedProof: Term = refl(Bool, False);
+export const orAndMixedType: Term = eq(Bool,
+  app(app(boolOr, app(app(boolAnd, True), False)), app(app(boolAnd, True), True)), True);
+export const orAndMixedProof: Term = refl(Bool, True);

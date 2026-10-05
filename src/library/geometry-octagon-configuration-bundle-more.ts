@@ -1,0 +1,24 @@
+import { Term, Nat, prod, pair, app, eq, refl } from '../syntax/ast';
+import { rotate90 } from './geometry-rotations';
+import { translate } from './geometry-transform';
+import { normSq } from './geometry-metrics';
+import { midpoint } from './geometry-segment';
+import { onCircle } from './geometry-circle';
+import { numeral } from './nat';
+
+export const Point2: Term = prod(Nat, Nat);
+const d=pair(numeral(1),numeral(2)); const t=(p:Term):Term=>app(app(translate,app(rotate90,p)),d);
+const a=t(pair(numeral(1),numeral(1))); const b=t(pair(numeral(2),numeral(2))); const c=t(pair(numeral(3),numeral(3))); const e=t(pair(numeral(4),numeral(4)));
+const f=t(pair(numeral(5),numeral(5))); const g=t(pair(numeral(6),numeral(6))); const h=t(pair(numeral(7),numeral(7))); const i=t(pair(numeral(8),numeral(8)));
+const m=app(app(midpoint,a),h);
+export const aType:Term=eq(Point2,a,pair(numeral(2),numeral(3))); export const aProof:Term=refl(Point2,pair(numeral(2),numeral(3)));
+export const bType:Term=eq(Point2,b,pair(numeral(3),numeral(4))); export const bProof:Term=refl(Point2,pair(numeral(3),numeral(4)));
+export const cType:Term=eq(Point2,c,pair(numeral(4),numeral(5))); export const cProof:Term=refl(Point2,pair(numeral(4),numeral(5)));
+export const eType:Term=eq(Point2,e,pair(numeral(5),numeral(6))); export const eProof:Term=refl(Point2,pair(numeral(5),numeral(6)));
+export const fType:Term=eq(Point2,f,pair(numeral(6),numeral(7))); export const fProof:Term=refl(Point2,pair(numeral(6),numeral(7)));
+export const gType:Term=eq(Point2,g,pair(numeral(7),numeral(8))); export const gProof:Term=refl(Point2,pair(numeral(7),numeral(8)));
+export const hType:Term=eq(Point2,h,pair(numeral(8),numeral(9))); export const hProof:Term=refl(Point2,pair(numeral(8),numeral(9)));
+export const iType:Term=eq(Point2,i,pair(numeral(9),numeral(10))); export const iProof:Term=refl(Point2,pair(numeral(9),numeral(10)));
+export const midpointType:Term=eq(Point2,m,pair(numeral(2),numeral(9))); export const midpointProof:Term=refl(Point2,pair(numeral(2),numeral(9)));
+export const iNormType:Term=eq(Nat,app(normSq,i),numeral(181)); export const iNormProof:Term=refl(Nat,numeral(181));
+export const iCircleType:Term=app(app(onCircle,i),pair(i,numeral(181))); export const iCircleProof:Term=refl(Nat,numeral(181));

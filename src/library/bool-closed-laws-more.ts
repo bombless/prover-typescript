@@ -1,0 +1,10 @@
+import { Term, Bool, True, False, app, eq, refl } from '../syntax/ast';
+import { boolAnd, boolOr } from './bool-ops';
+import { boolNot } from './bool';
+const e=(a:Term,b:Term):Term=>eq(Bool,a,b);
+export const andTrueFalseTrueType=e(app(app(boolAnd,True),app(app(boolOr,False),True)),True); export const andTrueFalseTrueProof=refl(Bool,True);
+export const orFalseTrueType=e(app(app(boolOr,False),True),True); export const orFalseTrueProof=refl(Bool,True);
+export const notAndType=e(app(boolNot,app(app(boolAnd,True),False)),True); export const notAndProof=refl(Bool,True);
+export const notOrType=e(app(boolNot,app(app(boolOr,False),True)),False); export const notOrProof=refl(Bool,False);
+export const andNestedType=e(app(app(boolAnd,app(app(boolOr,False),True)),app(app(boolAnd,True),False)),False); export const andNestedProof=refl(Bool,False);
+export const orNestedType=e(app(app(boolOr,app(app(boolAnd,True),True)),app(app(boolOr,False),False)),True); export const orNestedProof=refl(Bool,True);

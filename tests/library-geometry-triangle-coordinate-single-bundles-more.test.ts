@@ -1,0 +1,2 @@
+import test from 'node:test'; import { check } from '../src/kernel/typecheck'; import * as g from '../src/library/geometry-triangle-coordinate-single-bundles-more';
+test('triangle coordinate singleton bundles are kernel checked',()=>{for(const k of ['firstVertexX','firstVertexY','secondVertexX','secondVertexY','thirdVertexX','thirdVertexY']) check([], (g as any)[k+'Proof'], (g as any)[k+'Type']);});

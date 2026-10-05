@@ -43,3 +43,16 @@ export const midpointConcreteType: Term = eq(Point2,
   app(app(midpoint, pair(numeral(2), numeral(3))), pair(numeral(4), numeral(5))),
   pair(numeral(2), numeral(5)));
 export const midpointConcreteProof: Term = refl(Point2, pair(numeral(2), numeral(5)));
+
+/** A degenerate segment has itself as its midpoint in the discrete model. */
+export const midpointSelfType: Term = pi(Point2,
+  eq(Point2, app(app(midpoint, variable(0)), variable(0)), variable(0)), 'p');
+export const midpointSelfProof: Term = lambda(Point2, refl(Point2, variable(0)), 'p');
+
+/** The midpoint operation is reconstructed from its endpoint projections. */
+export const midpointProjectionEtaType: Term = pi(Point2, pi(Point2,
+  eq(Point2,
+    pair(fst(app(app(midpoint, variable(1)), variable(0))), snd(app(app(midpoint, variable(1)), variable(0)))),
+    pair(fst(variable(1)), snd(variable(0)))), 'q'), 'p');
+export const midpointProjectionEtaProof: Term = lambda(Point2,
+  lambda(Point2, refl(Point2, pair(fst(variable(1)), snd(variable(0)))), 'q'), 'p');

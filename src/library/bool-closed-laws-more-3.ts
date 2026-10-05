@@ -1,0 +1,11 @@
+import { Term, Bool, True, False, app, eq, refl } from '../syntax/ast';
+import { boolAnd, boolOr } from './bool-ops';
+import { boolNot } from './bool';
+import { boolXor } from './bool-xor';
+const e=(a:Term,b:Term):Term=>eq(Bool,a,b); const a=(x:Term,y:Term):Term=>app(app(boolAnd,x),y); const o=(x:Term,y:Term):Term=>app(app(boolOr,x),y); const n=(x:Term):Term=>app(boolNot,x); const x=(p:Term,q:Term):Term=>app(app(boolXor,p),q);
+export const andAssociativeClosedType=e(a(a(True,False),True),a(True,a(False,True))); export const andAssociativeClosedProof=refl(Bool,False);
+export const orAssociativeClosedType=e(o(o(False,True),False),o(False,o(True,False))); export const orAssociativeClosedProof=refl(Bool,True);
+export const andCommutativeClosedType=e(a(True,False),a(False,True)); export const andCommutativeClosedProof=refl(Bool,False);
+export const orCommutativeClosedType=e(o(True,False),o(False,True)); export const orCommutativeClosedProof=refl(Bool,True);
+export const xorDoubleClosedType=e(x(x(True,False),True),False); export const xorDoubleClosedProof=refl(Bool,False);
+export const notNotClosedType=e(n(n(False)),False); export const notNotClosedProof=refl(Bool,False);

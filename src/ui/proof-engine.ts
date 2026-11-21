@@ -5,8 +5,8 @@ import { tacticSession, TacticError, type TacticSession } from "../proof/tactic"
 import { show } from "../kernel/typecheck";
 import { type Term as CoreTerm, Nat, Zero, variable, pi, eq, app } from "../syntax/ast";
 import { add, addTerm, numeral } from "../library/nat";
-import { addZeroType } from "../library/add-zero";
-import { zeroAddType } from "../library/zero-add";
+import { addZeroType, addZeroProof } from "../library/add-zero";
+import { zeroAddType, zeroAddProof } from "../library/zero-add";
 import { succAddType } from "../library/succ-add";
 import { addSuccProof, addSuccType } from "../library/add-succ";
 import { addAssocType, addAssocProof } from "../library/add-assoc";
@@ -14,6 +14,24 @@ import { addCommType, addCommProof } from "../library/add-comm";
 import { mul, mulTerm } from "../library/mul";
 import { pow, powTerm } from "../library/pow";
 import { zeroMulType, succMulType, powZeroType, powSuccType } from "../library/mul-law";
+import {
+  addRightCongrType,
+  addRightCongrProof,
+  perimSwapType,
+  perimSwapProof,
+  perim345Type,
+  perimEquilateral3Type,
+  perimIsosceles558Type,
+  perimEquilateral5Type,
+  perim6810Type,
+  perimEquilateral4Type,
+  rectPerim35Type,
+  squarePerim4Type,
+  rectPerim46Type,
+  squarePerim5Type,
+  pentagonPerim3Type,
+  hexagonPerim4Type,
+} from "../library/geometry";
 import { definitionalEqual, shift, whnf } from "../kernel/reduction";
 
 export interface ContextEntryView { name: string; type: string; }
@@ -85,6 +103,12 @@ const PROOF_ALIASES: Record<string, CoreTerm> = {
   add_succ: addSuccProof,
   add_assoc: addAssocProof,
   add_comm: addCommProof,
+  seg_add_zero: addZeroProof,
+  seg_zero_add: zeroAddProof,
+  seg_comm: addCommProof,
+  seg_assoc: addAssocProof,
+  seg_congr_right: addRightCongrProof,
+  perim_swap: perimSwapProof,
 };
 
 const REAL_THEOREMS: Record<string, RealTheorem> = {
@@ -110,6 +134,27 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   compute_mul2: { name: "compute_mul2", type: eq(Nat, mulTerm(numeral(3), numeral(3)), numeral(9)) },
   compute_pow: { name: "compute_pow", type: eq(Nat, powTerm(numeral(2), numeral(3)), numeral(8)) },
   compute_pow2: { name: "compute_pow2", type: eq(Nat, powTerm(numeral(2), numeral(4)), numeral(16)) },
+  // Geometry: segment-length laws.
+  seg_add_zero: { name: "seg_add_zero", type: addZeroType },
+  seg_zero_add: { name: "seg_zero_add", type: zeroAddType },
+  seg_comm: { name: "seg_comm", type: addCommType },
+  seg_assoc: { name: "seg_assoc", type: addAssocType },
+  seg_congr_right: { name: "seg_congr_right", type: addRightCongrType },
+  // Geometry: closed triangle perimeters.
+  tri_perim_345: { name: "tri_perim_345", type: perim345Type },
+  tri_perim_equilateral3: { name: "tri_perim_equilateral3", type: perimEquilateral3Type },
+  tri_perim_isosceles558: { name: "tri_perim_isosceles558", type: perimIsosceles558Type },
+  tri_perim_equilateral5: { name: "tri_perim_equilateral5", type: perimEquilateral5Type },
+  tri_perim_6810: { name: "tri_perim_6810", type: perim6810Type },
+  tri_perim_equilateral4: { name: "tri_perim_equilateral4", type: perimEquilateral4Type },
+  // Geometry: closed quadrilateral and regular polygon perimeters.
+  rect_perim_35: { name: "rect_perim_35", type: rectPerim35Type },
+  square_perim_4: { name: "square_perim_4", type: squarePerim4Type },
+  rect_perim_46: { name: "rect_perim_46", type: rectPerim46Type },
+  square_perim_5: { name: "square_perim_5", type: squarePerim5Type },
+  pentagon_perim_3: { name: "pentagon_perim_3", type: pentagonPerim3Type },
+  hexagon_perim_4: { name: "hexagon_perim_4", type: hexagonPerim4Type },
+  perim_swap: { name: "perim_swap", type: perimSwapType },
 };
 
 function cloneView(state: ProofStateView): ProofStateView {

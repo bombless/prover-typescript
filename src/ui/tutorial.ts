@@ -47,6 +47,9 @@ export const CHAPTERS: readonly Chapter[] = [
   { id: "multiplication", number: 6, title: "Multiplication", exerciseIds: ["mul.zero_left", "mul.succ_left", "mul.compute"] },
   { id: "powers", number: 7, title: "Powers", exerciseIds: ["pow.zero", "pow.succ", "pow.compute"] },
   { id: "computation", number: 8, title: "Computation", exerciseIds: ["compute.add", "compute.mul", "compute.pow"] },
+  { id: "segments", number: 9, title: "Segments", exerciseIds: ["seg.add_zero", "seg.zero_add", "seg.comm", "seg.assoc", "seg.congr"] },
+  { id: "triangles", number: 10, title: "Triangle Perimeters", exerciseIds: ["tri.345", "tri.equilateral3", "tri.isosceles558", "tri.equilateral5", "tri.6810", "tri.equilateral4"] },
+  { id: "polygons", number: 11, title: "Quadrilaterals & Polygons", exerciseIds: ["rect.35", "square.4", "rect.46", "square.5", "pentagon.3", "hexagon.4", "perim.swap"] },
 ];
 
 export const EXERCISES: readonly Exercise[] = [
@@ -71,11 +74,32 @@ export const EXERCISES: readonly Exercise[] = [
   E("compute.add", 19, "Add 2 and 3", "compute_add", "2 + 3 = 5", ["pow.compute"], "rfl"),
   E("compute.mul", 20, "Multiply 3 by 3", "compute_mul2", "3 * 3 = 9", ["compute.add"], "rfl"),
   E("compute.pow", 21, "Power 2 to the fourth", "compute_pow2", "2 ^ 4 = 16", ["compute.mul"], "rfl"),
+  // Chapter 9 — Segments (length equalities over natural numbers).
+  E("seg.add_zero", 22, "Segment plus zero", "seg_add_zero", "AB + 0 = AB", ["compute.pow"], "exact seg_add_zero"),
+  E("seg.zero_add", 23, "Zero plus segment", "seg_zero_add", "0 + AB = AB", ["seg.add_zero"], "exact seg_zero_add"),
+  E("seg.comm", 24, "Segment addition commutes", "seg_comm", "AB + BC = BC + AB", ["seg.zero_add"], "exact seg_comm"),
+  E("seg.assoc", 25, "Segment concatenation associates", "seg_assoc", "(AB + BC) + CD = AB + (BC + CD)", ["seg.comm"], "exact seg_assoc"),
+  E("seg.congr", 26, "Equal segments stay equal after extending", "seg_congr_right", "AB = CD → AB + E = CD + E", ["seg.assoc"], "exact seg_congr_right"),
+  // Chapter 10 — Triangle perimeters.
+  E("tri.345", 27, "3-4-5 triangle", "tri_perim_345", "3 + 4 + 5 = 12", ["seg.congr"], "rfl"),
+  E("tri.equilateral3", 28, "Equilateral triangle, side 3", "tri_perim_equilateral3", "3 + 3 + 3 = 9", ["tri.345"], "rfl"),
+  E("tri.isosceles558", 29, "Isosceles triangle 5-5-8", "tri_perim_isosceles558", "5 + 5 + 8 = 18", ["tri.equilateral3"], "rfl"),
+  E("tri.equilateral5", 30, "Equilateral triangle, side 5", "tri_perim_equilateral5", "5 + 5 + 5 = 15", ["tri.isosceles558"], "rfl"),
+  E("tri.6810", 31, "6-8-10 triangle", "tri_perim_6810", "6 + 8 + 10 = 24", ["tri.equilateral5"], "rfl"),
+  E("tri.equilateral4", 32, "Equilateral triangle, side 4", "tri_perim_equilateral4", "4 + 4 + 4 = 12", ["tri.6810"], "rfl"),
+  // Chapter 11 — Quadrilaterals and regular polygons.
+  E("rect.35", 33, "Rectangle 3 × 5", "rect_perim_35", "2*3 + 2*5 = 16", ["tri.equilateral4"], "rfl"),
+  E("square.4", 34, "Square, side 4", "square_perim_4", "4 * 4 = 16", ["rect.35"], "rfl"),
+  E("rect.46", 35, "Rectangle 4 × 6", "rect_perim_46", "2*4 + 2*6 = 20", ["square.4"], "rfl"),
+  E("square.5", 36, "Square, side 5", "square_perim_5", "5 * 5 = 25", ["rect.46"], "rfl"),
+  E("pentagon.3", 37, "Regular pentagon, side 3", "pentagon_perim_3", "3 * 5 = 15", ["square.5"], "rfl"),
+  E("hexagon.4", 38, "Regular hexagon, side 4", "hexagon_perim_4", "4 * 6 = 24", ["pentagon.3"], "rfl"),
+  E("perim.swap", 39, "Swap two sides, keep perimeter", "perim_swap", "a + b + c = b + a + c", ["hexagon.4"], "exact perim_swap"),
 ];
 
 export const NATURAL_NUMBERS_LESSON: Lesson = {
   id: "natural-numbers",
-  title: "Interactive Proofs: Numbers, Arithmetic & Computation",
+  title: "Interactive Proofs: Numbers, Arithmetic & Geometry",
   chapters: CHAPTERS,
   exercises: EXERCISES,
   theorems: EXERCISES,

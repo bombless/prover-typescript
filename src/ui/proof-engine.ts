@@ -4,11 +4,16 @@ import { proofState, type ProofState } from "../proof/state";
 import { tacticSession, TacticError, type TacticSession } from "../proof/tactic";
 import { show } from "../kernel/typecheck";
 import { type Term as CoreTerm, Nat, Zero, variable, pi, eq, app } from "../syntax/ast";
-import { add, addTerm } from "../library/nat";
+import { add, addTerm, numeral } from "../library/nat";
 import { addZeroType } from "../library/add-zero";
 import { zeroAddType } from "../library/zero-add";
 import { succAddType } from "../library/succ-add";
 import { addSuccProof, addSuccType } from "../library/add-succ";
+import { addAssocType, addAssocProof } from "../library/add-assoc";
+import { addCommType, addCommProof } from "../library/add-comm";
+import { mul, mulTerm } from "../library/mul";
+import { pow, powTerm } from "../library/pow";
+import { zeroMulType, succMulType, powZeroType, powSuccType } from "../library/mul-law";
 import { definitionalEqual, shift, whnf } from "../kernel/reduction";
 
 export interface ContextEntryView { name: string; type: string; }
@@ -75,6 +80,13 @@ export class MockProofEngine implements ProofEngine {
 
 interface RealTheorem { readonly name: string; readonly type: CoreTerm; }
 
+/** Closed Kernel-checked proof terms addressable by `exact <alias>`. */
+const PROOF_ALIASES: Record<string, CoreTerm> = {
+  add_succ: addSuccProof,
+  add_assoc: addAssocProof,
+  add_comm: addCommProof,
+};
+
 const REAL_THEOREMS: Record<string, RealTheorem> = {
   zero: { name: "zero", type: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Zero" }, right: { kind: "Zero" } } },
   identity: { name: "identity", type: { kind: "Pi", domain: { kind: "Nat" }, body: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 0, name: "n" }, right: { kind: "Var", index: 0, name: "n" } }, name: "n" } },
@@ -87,6 +99,17 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   succ_add: { name: "succ_add", type: pi(Nat, eq(Nat, addTerm({ kind: "Succ", value: variable(0, "n") }, Zero), { kind: "Succ", value: variable(0, "n") }), "n") },
   assumption: { name: "assumption", type: { kind: "Pi", domain: { kind: "Nat" }, body: { kind: "Pi", domain: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 0, name: "n" }, right: { kind: "Var", index: 0, name: "n" } }, body: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Var", index: 1, name: "n" }, right: { kind: "Var", index: 1, name: "n" } }, name: "h" }, name: "n" } },
   apply: { name: "apply", type: { kind: "Eq", type: { kind: "Nat" }, left: { kind: "Zero" }, right: { kind: "Zero" } } },
+  add_assoc: { name: "add_assoc", type: addAssocType },
+  add_comm: { name: "add_comm", type: addCommType },
+  zero_mul: { name: "zero_mul", type: zeroMulType },
+  succ_mul: { name: "succ_mul", type: succMulType },
+  pow_zero: { name: "pow_zero", type: powZeroType },
+  pow_succ: { name: "pow_succ", type: powSuccType },
+  compute_add: { name: "compute_add", type: eq(Nat, addTerm(numeral(2), numeral(3)), numeral(5)) },
+  compute_mul: { name: "compute_mul", type: eq(Nat, mulTerm(numeral(2), numeral(3)), numeral(6)) },
+  compute_mul2: { name: "compute_mul2", type: eq(Nat, mulTerm(numeral(3), numeral(3)), numeral(9)) },
+  compute_pow: { name: "compute_pow", type: eq(Nat, powTerm(numeral(2), numeral(3)), numeral(8)) },
+  compute_pow2: { name: "compute_pow2", type: eq(Nat, powTerm(numeral(2), numeral(4)), numeral(16)) },
 };
 
 function cloneView(state: ProofStateView): ProofStateView {
@@ -102,10 +125,32 @@ function isAddRecursor(term: Extract<CoreTerm, { kind: "NatRec" }>): boolean {
   return succBody.kind === "Succ" && succBody.value.kind === "Var" && succBody.value.index === 0;
 }
 
+function numeralValue(term: CoreTerm): number | null {
+  if (term.kind === "Zero") return 0;
+  if (term.kind === "Succ") {
+    const inner = numeralValue(term.value);
+    return inner === null ? null : inner + 1;
+  }
+  return null;
+}
+
+type BinOp = "add" | "mul" | "pow";
+
+function splitBin(term: CoreTerm): { op: BinOp; left: CoreTerm; right: CoreTerm } | null {
+  if (term.kind !== "App" || term.fn.kind !== "App") return null;
+  const op: BinOp | null = term.fn.fn === add ? "add" : term.fn.fn === mul ? "mul" : term.fn.fn === pow ? "pow" : null;
+  return op ? { op, left: term.fn.arg, right: term.arg } : null;
+}
+
 function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): string {
-  const formatAddOperand = (operand: CoreTerm): string => {
+  const PREC: Record<BinOp, number> = { add: 1, mul: 2, pow: 3 };
+  const formatOperand = (operand: CoreTerm, outer: BinOp): string => {
     const rendered = formatDisplayTerm(operand, boundNames);
-    return operand.kind === "Succ" && operand.value.kind === "App" ? `(${rendered})` : rendered;
+    const inner = splitBin(operand);
+    if (!inner) return rendered;
+    if (PREC[inner.op] < PREC[outer]) return `(${rendered})`;
+    if (inner.op === outer) return `(${rendered})`;
+    return rendered;
   };
 
   switch (term.kind) {
@@ -113,6 +158,8 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
     case "Nat": return "Nat";
     case "Zero": return "0";
     case "Succ": {
+      const closed = numeralValue(term);
+      if (closed !== null) return String(closed);
       const rendered = formatDisplayTerm(term.value, boundNames);
       return term.value.kind === "App" || term.value.kind === "Succ" ? `Succ (${rendered})` : `Succ ${rendered}`;
     }
@@ -143,10 +190,12 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
     }
     case "Eq": return `${formatDisplayTerm(term.left, boundNames)} = ${formatDisplayTerm(term.right, boundNames)}`;
     case "App": {
-      // `add` is encoded as a dependent lambda/recursor in Core, but users
-      // should see the surface notation in the tutorial.
-      if (term.fn.kind === "App" && term.fn.fn === add) {
-        return `${formatAddOperand(term.fn.arg)} + ${formatAddOperand(term.arg)}`;
+      // `add`, `mul` and `pow` are encoded as dependent lambda/recursors in
+      // Core, but users should see the surface notation in the tutorial.
+      const bin = splitBin(term);
+      if (bin) {
+        const symbol = bin.op === "add" ? " + " : bin.op === "mul" ? " * " : " ^ ";
+        return `${formatOperand(bin.left, bin.op)}${symbol}${formatOperand(bin.right, bin.op)}`;
       }
       return `(${formatDisplayTerm(term.fn, boundNames)} ${formatDisplayTerm(term.arg, boundNames)})`;
     }
@@ -280,7 +329,7 @@ export class RealProofEngine implements ProofEngine {
           if (!goal) throw new TacticError("No goals remain");
           // Tutorial theorem aliases are resolved at the UI adapter boundary;
           // the resulting Core term still crosses the normal Kernel check.
-          const term = argument === "add_succ" ? addSuccProof : parseArgument(argument, goal.context);
+          const term = PROOF_ALIASES[argument] ?? parseArgument(argument, goal.context);
           this.session = this.session.exact(term);
           break;
         }

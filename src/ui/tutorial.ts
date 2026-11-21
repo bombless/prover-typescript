@@ -43,6 +43,10 @@ export const CHAPTERS: readonly Chapter[] = [
   { id: "addition", number: 2, title: "Addition", exerciseIds: ["addition.add_zero", "addition.add_succ"] },
   { id: "equality", number: 3, title: "Equality & Rewrite", exerciseIds: ["equality.transport", "equality.rewrite"] },
   { id: "induction", number: 4, title: "Induction", exerciseIds: ["induction.add_zero", "induction.zero_add", "induction.succ_add_zero"] },
+  { id: "add-laws", number: 5, title: "Addition Laws", exerciseIds: ["laws.assoc", "laws.comm"] },
+  { id: "multiplication", number: 6, title: "Multiplication", exerciseIds: ["mul.zero_left", "mul.succ_left", "mul.compute"] },
+  { id: "powers", number: 7, title: "Powers", exerciseIds: ["pow.zero", "pow.succ", "pow.compute"] },
+  { id: "computation", number: 8, title: "Computation", exerciseIds: ["compute.add", "compute.mul", "compute.pow"] },
 ];
 
 export const EXERCISES: readonly Exercise[] = [
@@ -56,11 +60,22 @@ export const EXERCISES: readonly Exercise[] = [
   E("induction.add_zero", 8, "Induction: n + 0", "add_zero", "n + 0 = n", ["equality.rewrite"], "intro; induction n; rfl; rewrite IH; rfl"),
   E("induction.zero_add", 9, "Induction: 0 + n", "zero_add", "0 + n = n", ["induction.add_zero"], "intro; rfl (compare with induction)"),
   E("induction.succ_add_zero", 10, "Induction: Succ n + 0", "succ_add", "Succ n + 0 = Succ n", ["induction.zero_add"], "intro n; intro m; induction m; rfl; rewrite IH; rfl"),
+  E("laws.assoc", 11, "Associativity", "add_assoc", "(a + b) + c = a + (b + c)", ["induction.succ_add_zero"], "exact add_assoc"),
+  E("laws.comm", 12, "Commutativity", "add_comm", "a + b = b + a", ["laws.assoc"], "exact add_comm"),
+  E("mul.zero_left", 13, "Zero times n", "zero_mul", "0 * n = 0", ["laws.comm"], "intro; rfl"),
+  E("mul.succ_left", 14, "Successor times m", "succ_mul", "Succ n * m = m + n * m", ["mul.zero_left"], "intro; intro; rfl"),
+  E("mul.compute", 15, "Multiply 2 by 3", "compute_mul", "2 * 3 = 6", ["mul.succ_left"], "rfl"),
+  E("pow.zero", 16, "Power of zero", "pow_zero", "n ^ 0 = 1", ["mul.compute"], "intro; rfl"),
+  E("pow.succ", 17, "Power of successor", "pow_succ", "n ^ Succ k = n * n ^ k", ["pow.zero"], "intro; intro; rfl"),
+  E("pow.compute", 18, "Power 2 cubed", "compute_pow", "2 ^ 3 = 8", ["pow.succ"], "rfl"),
+  E("compute.add", 19, "Add 2 and 3", "compute_add", "2 + 3 = 5", ["pow.compute"], "rfl"),
+  E("compute.mul", 20, "Multiply 3 by 3", "compute_mul2", "3 * 3 = 9", ["compute.add"], "rfl"),
+  E("compute.pow", 21, "Power 2 to the fourth", "compute_pow2", "2 ^ 4 = 16", ["compute.mul"], "rfl"),
 ];
 
 export const NATURAL_NUMBERS_LESSON: Lesson = {
   id: "natural-numbers",
-  title: "Natural Numbers: Chapters 1–4",
+  title: "Interactive Proofs: Numbers, Arithmetic & Computation",
   chapters: CHAPTERS,
   exercises: EXERCISES,
   theorems: EXERCISES,

@@ -14,16 +14,23 @@ function prove(engine: RealProofEngine, theoremId: string, tactics: readonly str
   assert.equal(result.state.completed, true, `${theoremId} should be Kernel-backed complete`);
 }
 
-test("Chapters 1-4 registry has ten stable exercises in order", () => {
-  assert.deepEqual(CHAPTERS.map((chapter) => chapter.title), ["Natural Numbers", "Addition", "Equality & Rewrite", "Induction"]);
-  assert.deepEqual(EXERCISES.map((exercise) => exercise.number), [1,2,3,4,5,6,7,8,9,10]);
+test("registry has all exercises in stable chapter order", () => {
+  assert.deepEqual(CHAPTERS.map((chapter) => chapter.title), [
+    "Natural Numbers", "Addition", "Equality & Rewrite", "Induction",
+    "Addition Laws", "Multiplication", "Powers", "Computation",
+  ]);
+  assert.deepEqual(EXERCISES.map((exercise) => exercise.number), Array.from({ length: 21 }, (_, i) => i + 1));
   assert.deepEqual(EXERCISES.map((exercise) => exercise.id), [
     "numbers.zero_eq_zero", "numbers.identity", "numbers.zero_add",
     "addition.add_zero", "addition.add_succ", "equality.transport", "equality.rewrite",
     "induction.add_zero", "induction.zero_add", "induction.succ_add_zero",
+    "laws.assoc", "laws.comm",
+    "mul.zero_left", "mul.succ_left", "mul.compute",
+    "pow.zero", "pow.succ", "pow.compute",
+    "compute.add", "compute.mul", "compute.pow",
   ]);
-  assert.equal(NATURAL_NUMBERS_LESSON.exercises.length, 10);
-  assert.equal(NATURAL_NUMBERS_LESSON.theorems.length, 10);
+  assert.equal(NATURAL_NUMBERS_LESSON.exercises.length, 21);
+  assert.equal(NATURAL_NUMBERS_LESSON.theorems.length, 21);
 });
 
 test("registry exercises all load real proof goals", () => {
@@ -37,7 +44,7 @@ test("registry exercises all load real proof goals", () => {
   }
 });
 
-test("ten exercises complete through RealProofEngine and Kernel", () => {
+test("registered exercises complete through RealProofEngine and Kernel", () => {
   const engine = new RealProofEngine();
   prove(engine, "zero", ["rfl"]);
   prove(engine, "identity", ["intro", "rfl"]);
@@ -49,6 +56,17 @@ test("ten exercises complete through RealProofEngine and Kernel", () => {
   prove(engine, "add_zero", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
   prove(engine, "zero_add", ["intro", "rfl"]);
   prove(engine, "succ_add", ["intro", "induction n", "rfl", "rewrite IH", "rfl"]);
+  prove(engine, "add_assoc", ["exact add_assoc"]);
+  prove(engine, "add_comm", ["exact add_comm"]);
+  prove(engine, "zero_mul", ["intro", "rfl"]);
+  prove(engine, "succ_mul", ["intro", "intro", "rfl"]);
+  prove(engine, "compute_mul", ["rfl"]);
+  prove(engine, "pow_zero", ["intro", "rfl"]);
+  prove(engine, "pow_succ", ["intro", "intro", "rfl"]);
+  prove(engine, "compute_pow", ["rfl"]);
+  prove(engine, "compute_add", ["rfl"]);
+  prove(engine, "compute_mul2", ["rfl"]);
+  prove(engine, "compute_pow2", ["rfl"]);
 });
 
 test("rewrite success and failure are real and failed rewrite rolls back", () => {
@@ -118,5 +136,6 @@ test("progress records only successful Kernel-backed completion and keeps exerci
 test("next exercise follows chapter order", () => {
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "numbers.zero_eq_zero")?.id, "numbers.identity");
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "addition.add_succ")?.id, "equality.transport");
-  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "induction.succ_add_zero"), null);
+  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "induction.succ_add_zero")?.id, "laws.assoc");
+  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "compute.pow"), null);
 });

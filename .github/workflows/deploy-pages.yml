@@ -1,4 +1,4 @@
-name: Deploy Natural Number Game to GitHub Pages
+name: Deploy Prover Web App to GitHub Pages
 
 on:
   push:

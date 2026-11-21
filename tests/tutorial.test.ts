@@ -20,7 +20,7 @@ test("registry has all exercises in stable chapter order", () => {
     "Addition Laws", "Multiplication", "Powers", "Computation",
     "Segments", "Triangle Perimeters", "Quadrilaterals & Polygons",
   ]);
-  assert.deepEqual(EXERCISES.map((exercise) => exercise.number), Array.from({ length: 39 }, (_, i) => i + 1));
+  assert.deepEqual(EXERCISES.map((exercise) => exercise.number), Array.from({ length: 44 }, (_, i) => i + 1));
   assert.deepEqual(EXERCISES.map((exercise) => exercise.id), [
     "numbers.zero_eq_zero", "numbers.identity", "numbers.zero_add",
     "addition.add_zero", "addition.add_succ", "equality.transport", "equality.rewrite",
@@ -29,12 +29,12 @@ test("registry has all exercises in stable chapter order", () => {
     "mul.zero_left", "mul.succ_left", "mul.compute",
     "pow.zero", "pow.succ", "pow.compute",
     "compute.add", "compute.mul", "compute.pow",
-    "seg.add_zero", "seg.zero_add", "seg.comm", "seg.assoc", "seg.congr",
-    "tri.345", "tri.equilateral3", "tri.isosceles558", "tri.equilateral5", "tri.6810", "tri.equilateral4",
-    "rect.35", "square.4", "rect.46", "square.5", "pentagon.3", "hexagon.4", "perim.swap",
+    "seg.add_zero", "seg.zero_add", "seg.comm", "seg.assoc", "seg.congr", "seg.congr_left",
+    "tri.345", "tri.equilateral3", "tri.isosceles558", "tri.equilateral5", "tri.6810", "tri.equilateral4", "tri.equilateral6",
+    "rect.35", "square.4", "rect.46", "square.5", "pentagon.3", "hexagon.4", "octagon.2", "rect.58", "square.6", "perim.swap",
   ]);
-  assert.equal(NATURAL_NUMBERS_LESSON.exercises.length, 39);
-  assert.equal(NATURAL_NUMBERS_LESSON.theorems.length, 39);
+  assert.equal(NATURAL_NUMBERS_LESSON.exercises.length, 44);
+  assert.equal(NATURAL_NUMBERS_LESSON.theorems.length, 44);
 });
 
 test("registry exercises all load real proof goals", () => {
@@ -77,6 +77,7 @@ test("registered exercises complete through RealProofEngine and Kernel", () => {
   prove(engine, "seg_comm", ["exact seg_comm"]);
   prove(engine, "seg_assoc", ["exact seg_assoc"]);
   prove(engine, "seg_congr_right", ["exact seg_congr_right"]);
+  prove(engine, "seg_congr_left", ["exact seg_congr_left"]);
   // Geometry: closed triangle perimeters.
   prove(engine, "tri_perim_345", ["rfl"]);
   prove(engine, "tri_perim_equilateral3", ["rfl"]);
@@ -84,6 +85,7 @@ test("registered exercises complete through RealProofEngine and Kernel", () => {
   prove(engine, "tri_perim_equilateral5", ["rfl"]);
   prove(engine, "tri_perim_6810", ["rfl"]);
   prove(engine, "tri_perim_equilateral4", ["rfl"]);
+  prove(engine, "tri_perim_equilateral6", ["rfl"]);
   // Geometry: closed quadrilateral and polygon perimeters.
   prove(engine, "rect_perim_35", ["rfl"]);
   prove(engine, "square_perim_4", ["rfl"]);
@@ -91,6 +93,9 @@ test("registered exercises complete through RealProofEngine and Kernel", () => {
   prove(engine, "square_perim_5", ["rfl"]);
   prove(engine, "pentagon_perim_3", ["rfl"]);
   prove(engine, "hexagon_perim_4", ["rfl"]);
+  prove(engine, "octagon_perim_2", ["rfl"]);
+  prove(engine, "rect_perim_58", ["rfl"]);
+  prove(engine, "square_perim_6", ["rfl"]);
   prove(engine, "perim_swap", ["exact perim_swap"]);
 });
 
@@ -163,6 +168,6 @@ test("next exercise follows chapter order", () => {
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "addition.add_succ")?.id, "equality.transport");
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "induction.succ_add_zero")?.id, "laws.assoc");
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "compute.pow")?.id, "seg.add_zero");
-  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "hexagon.4")?.id, "perim.swap");
+  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "hexagon.4")?.id, "octagon.2");
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "perim.swap"), null);
 });

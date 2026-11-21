@@ -71,6 +71,61 @@ export const addRightCongrProof: Term = lambda(
   'x'
 );
 
+/**
+ * `(x y z : Nat) → x = y → z + x = z + y`
+ *
+ * Equal segments substituted on the left of a common segment stay equal.
+ */
+export const addLeftCongrType: Term = pi(
+  Nat,
+  pi(
+    Nat,
+    pi(
+      Nat,
+      pi(
+        eq(Nat, variable(2, 'x'), variable(1, 'y')),
+        eq(Nat, addTerm(variable(1, 'z'), variable(3, 'x')), addTerm(variable(1, 'z'), variable(2, 'y'))),
+        'h'
+      ),
+      'z'
+    ),
+    'y'
+  ),
+  'x'
+);
+
+export const addLeftCongrProof: Term = lambda(
+  Nat,
+  lambda(
+    Nat,
+    lambda(
+      Nat,
+      lambda(
+        eq(Nat, variable(2, 'x'), variable(1, 'y')),
+        eqRec(
+          lambda(
+            Nat,
+            eq(
+              Nat,
+              addTerm(variable(2, 'z'), variable(4, 'x')),
+              addTerm(variable(2, 'z'), variable(0, 't'))
+            ),
+            't'
+          ),
+          refl(Nat, addTerm(variable(1, 'z'), variable(3, 'x'))),
+          variable(3, 'x'),
+          variable(2, 'y'),
+          variable(0, 'h')
+        ),
+        'h'
+      ),
+      'z'
+    ),
+    'y'
+  ),
+  'x'
+);
+
 /* --------------------------------------------- perimeter base swapping */
 
 /**
@@ -212,6 +267,34 @@ export const hexagonPerim4Type: Term = eq(
   numeral(24)
 );
 
+/** Equilateral triangle side 6: `6 + 6 + 6 = 18`. */
+export const perimEquilateral6Type: Term = eq(
+  Nat,
+  addTerm(addTerm(numeral(6), numeral(6)), numeral(6)),
+  numeral(18)
+);
+
+/** Rectangle 5 × 8: `2*5 + 2*8 = 26`. */
+export const rectPerim58Type: Term = eq(
+  Nat,
+  addTerm(mulTerm(numeral(2), numeral(5)), mulTerm(numeral(2), numeral(8))),
+  numeral(26)
+);
+
+/** Square side 6: `6 * 6 = 36`. */
+export const squarePerim6Type: Term = eq(
+  Nat,
+  mulTerm(numeral(6), numeral(6)),
+  numeral(36)
+);
+
+/** Regular octagon side 2: `2 * 8 = 16`. */
+export const octagonPerim2Type: Term = eq(
+  Nat,
+  mulTerm(numeral(2), numeral(8)),
+  numeral(16)
+);
+
 /** All closed perimeter propositions, for batch Kernel normalization checks. */
 export const closedPerimeterTypes: readonly Term[] = [
   perim345Type,
@@ -226,4 +309,8 @@ export const closedPerimeterTypes: readonly Term[] = [
   squarePerim5Type,
   pentagonPerim3Type,
   hexagonPerim4Type,
+  perimEquilateral6Type,
+  rectPerim58Type,
+  squarePerim6Type,
+  octagonPerim2Type,
 ];

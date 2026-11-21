@@ -17,6 +17,8 @@ import { zeroMulType, succMulType, powZeroType, powSuccType } from "../library/m
 import {
   addRightCongrType,
   addRightCongrProof,
+  addLeftCongrType,
+  addLeftCongrProof,
   perimSwapType,
   perimSwapProof,
   perim345Type,
@@ -31,6 +33,10 @@ import {
   squarePerim5Type,
   pentagonPerim3Type,
   hexagonPerim4Type,
+  perimEquilateral6Type,
+  rectPerim58Type,
+  squarePerim6Type,
+  octagonPerim2Type,
 } from "../library/geometry";
 import { definitionalEqual, shift, whnf } from "../kernel/reduction";
 
@@ -108,6 +114,7 @@ const PROOF_ALIASES: Record<string, CoreTerm> = {
   seg_comm: addCommProof,
   seg_assoc: addAssocProof,
   seg_congr_right: addRightCongrProof,
+  seg_congr_left: addLeftCongrProof,
   perim_swap: perimSwapProof,
 };
 
@@ -140,6 +147,7 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   seg_comm: { name: "seg_comm", type: addCommType },
   seg_assoc: { name: "seg_assoc", type: addAssocType },
   seg_congr_right: { name: "seg_congr_right", type: addRightCongrType },
+  seg_congr_left: { name: "seg_congr_left", type: addLeftCongrType },
   // Geometry: closed triangle perimeters.
   tri_perim_345: { name: "tri_perim_345", type: perim345Type },
   tri_perim_equilateral3: { name: "tri_perim_equilateral3", type: perimEquilateral3Type },
@@ -154,6 +162,10 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   square_perim_5: { name: "square_perim_5", type: squarePerim5Type },
   pentagon_perim_3: { name: "pentagon_perim_3", type: pentagonPerim3Type },
   hexagon_perim_4: { name: "hexagon_perim_4", type: hexagonPerim4Type },
+  tri_perim_equilateral6: { name: "tri_perim_equilateral6", type: perimEquilateral6Type },
+  rect_perim_58: { name: "rect_perim_58", type: rectPerim58Type },
+  square_perim_6: { name: "square_perim_6", type: squarePerim6Type },
+  octagon_perim_2: { name: "octagon_perim_2", type: octagonPerim2Type },
   perim_swap: { name: "perim_swap", type: perimSwapType },
 };
 

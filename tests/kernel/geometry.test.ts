@@ -7,6 +7,8 @@ import { addTerm, numeral } from '../../src/library/nat';
 import {
   addRightCongrType,
   addRightCongrProof,
+  addLeftCongrType,
+  addLeftCongrProof,
   perimSwapType,
   perimSwapProof,
   closedPerimeterTypes,
@@ -25,6 +27,25 @@ test('addRightCongr concrete applications are Kernel-checked', () => {
     const h = refl(Nat, a);
     const proof = app(app(app(app(addRightCongrProof, a), b), c), h);
     const expected = eq(Nat, addTerm(a, c), addTerm(b, c));
+
+    check([], proof, expected);
+    assert.ok(definitionalEqual(infer([], proof), expected));
+  }
+});
+
+test('addLeftCongr proof has the expected dependent function type', () => {
+  check([], addLeftCongrProof, addLeftCongrType);
+  assert.ok(definitionalEqual(infer([], addLeftCongrProof), addLeftCongrType));
+});
+
+test('addLeftCongr concrete applications are Kernel-checked', () => {
+  for (const [n, m, k] of [[2, 2, 3], [1, 1, 4], [0, 0, 2]] as const) {
+    const a = numeral(n);
+    const b = numeral(m);
+    const c = numeral(k);
+    const h = refl(Nat, a);
+    const proof = app(app(app(app(addLeftCongrProof, a), b), c), h);
+    const expected = eq(Nat, addTerm(c, a), addTerm(c, b));
 
     check([], proof, expected);
     assert.ok(definitionalEqual(infer([], proof), expected));

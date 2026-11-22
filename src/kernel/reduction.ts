@@ -3,7 +3,7 @@ import { Term, app, lambda, natRec, succ } from '../syntax/ast';
 export function shift(term: Term, amount: number, cutoff = 0): Term {
   switch (term.kind) {
     case 'Var': return { ...term, index: term.index >= cutoff ? term.index + amount : term.index };
-    case 'Type': case 'Nat': case 'Zero': return term;
+    case 'Type': case 'Nat': case 'Point': case 'Zero': return term;
     case 'Pi': return { ...term, domain: shift(term.domain, amount, cutoff), body: shift(term.body, amount, cutoff + 1) };
     case 'Lambda': return { ...term, domain: shift(term.domain, amount, cutoff), body: shift(term.body, amount, cutoff + 1) };
     case 'App': return app(shift(term.fn, amount, cutoff), shift(term.arg, amount, cutoff));
@@ -21,7 +21,7 @@ export function substitute(body: Term, replacement: Term, depth = 0): Term {
       if (body.index === depth) return shift(replacement, depth);
       if (body.index > depth) return { ...body, index: body.index - 1 };
       return body;
-    case 'Type': case 'Nat': case 'Zero': return body;
+    case 'Type': case 'Nat': case 'Point': case 'Zero': return body;
     case 'Pi': return { ...body, domain: substitute(body.domain, replacement, depth), body: substitute(body.body, replacement, depth + 1) };
     case 'Lambda': return { ...body, domain: substitute(body.domain, replacement, depth), body: substitute(body.body, replacement, depth + 1) };
     case 'App': return app(substitute(body.fn, replacement, depth), substitute(body.arg, replacement, depth));
@@ -63,7 +63,7 @@ export function normalize(term: Term): Term {
     return normalize(substitute(reduced.fn.body, reduced.arg));
   }
   switch (reduced.kind) {
-    case 'Type': case 'Nat': case 'Zero': case 'Var': return reduced;
+    case 'Type': case 'Nat': case 'Point': case 'Zero': case 'Var': return reduced;
     case 'Pi': return { ...reduced, domain: normalize(reduced.domain), body: normalize(reduced.body) };
     case 'Lambda': return { ...reduced, domain: normalize(reduced.domain), body: normalize(reduced.body) };
     case 'App': {
@@ -91,7 +91,7 @@ export function definitionalEqual(left: Term, right: Term): boolean {
 export function structuralEqual(left: Term, right: Term): boolean {
   if (left.kind !== right.kind) return false;
   switch (left.kind) {
-    case 'Type': case 'Nat': case 'Zero': return true;
+    case 'Type': case 'Nat': case 'Point': case 'Zero': return true;
     case 'Var': return left.index === (right as typeof left).index;
     case 'Pi': case 'Lambda': {
       const r = right as typeof left;

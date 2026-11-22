@@ -213,6 +213,7 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
   switch (term.kind) {
     case "Type": return "Type";
     case "Nat": return "Nat";
+    case "Point": return "Point";
     case "Zero": return "0";
     case "Succ": {
       const closed = numeralValue(term);
@@ -253,6 +254,10 @@ function formatDisplayTerm(term: CoreTerm, boundNames: readonly string[] = []): 
       if (bin) {
         const symbol = bin.op === "add" ? " + " : bin.op === "mul" ? " * " : " ^ ";
         return `${formatOperand(bin.left, bin.op)}${symbol}${formatOperand(bin.right, bin.op)}`;
+      }
+      // Segment distance `dist A B` is a nested application; show it as `dist A B`.
+      if (term.fn.kind === "App" && term.fn.fn.kind === "Var" && term.fn.fn.name === "dist") {
+        return `dist ${formatDisplayTerm(term.fn.arg, boundNames)} ${formatDisplayTerm(term.arg, boundNames)}`;
       }
       return `(${formatDisplayTerm(term.fn, boundNames)} ${formatDisplayTerm(term.arg, boundNames)})`;
     }

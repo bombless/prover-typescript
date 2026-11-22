@@ -13,6 +13,7 @@ export function infer(ctx: Context, term: Term): Term {
   switch (term.kind) {
     case 'Type': return Type;
     case 'Nat': return Type;
+    case 'Point': return Type;
     case 'Zero': return Nat;
     case 'Var': {
       const type = ctx[ctx.length - 1 - term.index];
@@ -108,6 +109,7 @@ export function show(term: Term): string {
   switch (term.kind) {
     case 'Type': return 'Type';
     case 'Nat': return 'Nat';
+    case 'Point': return 'Point';
     case 'Zero': return '0';
     case 'Var': return term.name ?? `#${term.index}`;
     case 'Pi': return `(x : ${show(term.domain)}) -> ${show(term.body)}`;

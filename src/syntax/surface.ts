@@ -5,6 +5,7 @@ export type SurfaceTerm =
   | SurfaceLambda
   | SurfaceApp
   | SurfaceNat
+  | SurfacePoint
   | SurfaceZero
   | SurfaceSucc
   | SurfaceNatRec
@@ -43,6 +44,10 @@ export interface SurfaceApp {
 
 export interface SurfaceNat {
   readonly kind: 'Nat';
+}
+
+export interface SurfacePoint {
+  readonly kind: 'Point';
 }
 
 export interface SurfaceZero {
@@ -86,6 +91,7 @@ export interface SurfaceEqRec {
 
 export const surfaceSort: SurfaceSort = { kind: 'Sort' };
 export const surfaceNat: SurfaceNat = { kind: 'Nat' };
+export const surfacePoint: SurfacePoint = { kind: 'Point' };
 export const surfaceZero: SurfaceZero = { kind: 'Zero' };
 
 export function surfaceVar(name: string): SurfaceVar {

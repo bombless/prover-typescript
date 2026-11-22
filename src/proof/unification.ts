@@ -35,7 +35,7 @@ function materializeCore(term: Term, context: MetaContext): Term {
     return materializeCore(candidate, context);
   };
   switch (term.kind) {
-    case 'Type': case 'Nat': case 'Zero': case 'Var': return term;
+    case 'Type': case 'Nat': case 'Point': case 'Zero': case 'Var': return term;
     case 'Pi': return { ...term, domain: nested(term.domain), body: nested(term.body) };
     case 'Lambda': return { ...term, domain: nested(term.domain), body: nested(term.body) };
     case 'App': return { ...term, fn: nested(term.fn), arg: nested(term.arg) };
@@ -54,7 +54,7 @@ export function substituteUnification(body: UnificationTerm, replacement: Unific
       if (body.index === depth) return shiftUnification(replacement, depth);
       if (body.index > depth) return { ...body, index: body.index - 1 };
       return body;
-    case 'Type': case 'Nat': case 'Zero': return body;
+    case 'Type': case 'Nat': case 'Point': case 'Zero': return body;
     case 'Pi': return { ...body, domain: substituteUnification(body.domain, replacement, depth) as Term, body: substituteUnification(body.body, replacement, depth + 1) as Term };
     case 'Lambda': return { ...body, domain: substituteUnification(body.domain, replacement, depth) as Term, body: substituteUnification(body.body, replacement, depth + 1) as Term };
     case 'App': return { ...body, fn: substituteUnification(body.fn, replacement, depth) as Term, arg: substituteUnification(body.arg, replacement, depth) as Term };
@@ -70,7 +70,7 @@ function shiftUnification(term: UnificationTerm, amount: number, cutoff = 0): Un
   if (term.kind === 'meta') return term;
   switch (term.kind) {
     case 'Var': return { ...term, index: term.index >= cutoff ? term.index + amount : term.index };
-    case 'Type': case 'Nat': case 'Zero': return term;
+    case 'Type': case 'Nat': case 'Point': case 'Zero': return term;
     case 'Pi': return { ...term, domain: shiftUnification(term.domain, amount, cutoff) as Term, body: shiftUnification(term.body, amount, cutoff + 1) as Term };
     case 'Lambda': return { ...term, domain: shiftUnification(term.domain, amount, cutoff) as Term, body: shiftUnification(term.body, amount, cutoff + 1) as Term };
     case 'App': return { ...term, fn: shiftUnification(term.fn, amount, cutoff) as Term, arg: shiftUnification(term.arg, amount, cutoff) as Term };
@@ -99,7 +99,7 @@ function occurs(id: number, term: UnificationTerm, context: MetaContext): boolea
   const resolved = prune(term, context);
   if (resolved.kind === 'meta') return resolved.id === id;
   switch (resolved.kind) {
-    case 'Type': case 'Nat': case 'Zero': case 'Var': return false;
+    case 'Type': case 'Nat': case 'Point': case 'Zero': case 'Var': return false;
     case 'Pi': case 'Lambda': return occurs(id, resolved.domain, context) || occurs(id, resolved.body, context);
     case 'App': return occurs(id, resolved.fn, context) || occurs(id, resolved.arg, context);
     case 'Succ': return occurs(id, resolved.value, context);
@@ -113,7 +113,7 @@ function occurs(id: number, term: UnificationTerm, context: MetaContext): boolea
 function unifyCore(left: Term, right: Term, context: MetaContext): MetaContext {
   if (left.kind !== right.kind) throw new UnificationError(`Cannot unify ${left.kind} with ${right.kind}`);
   switch (left.kind) {
-    case 'Type': case 'Nat': case 'Zero': return context;
+    case 'Type': case 'Nat': case 'Point': case 'Zero': return context;
     case 'Var':
       if (left.index !== (right as typeof left).index) throw new UnificationError(`Cannot unify variables #${left.index} and #${(right as typeof left).index}`);
       return context;

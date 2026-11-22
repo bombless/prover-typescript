@@ -8,12 +8,15 @@ export type Term =
   | { readonly kind: 'Zero' }
   | { readonly kind: 'Succ'; readonly value: Term }
   | { readonly kind: 'NatRec'; readonly motive: Term; readonly zeroCase: Term; readonly succCase: Term; readonly scrutinee: Term }
+  | { readonly kind: 'Point' }
   | { readonly kind: 'Eq'; readonly type: Term; readonly left: Term; readonly right: Term }
   | { readonly kind: 'Refl'; readonly type: Term; readonly value: Term }
   | { readonly kind: 'EqRec'; readonly motive: Term; readonly reflCase: Term; readonly left: Term; readonly right: Term; readonly equality: Term };
 
 export const Type: Term = { kind: 'Type' };
 export const Nat: Term = { kind: 'Nat' };
+/** Opaque geometric point sort: no constructors; points only appear as binders. */
+export const Point: Term = { kind: 'Point' };
 export const Zero: Term = { kind: 'Zero' };
 
 export function variable(index: number, name?: string): Term {

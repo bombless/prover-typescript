@@ -28,7 +28,7 @@ test('add_succ uses Nat.rec and Eq.rec in the successor case', () => {
   const containsEqRec = (term: import('../../src/syntax/ast').Term): boolean => {
     if (term.kind === 'EqRec') return true;
     switch (term.kind) {
-      case 'Type': case 'Nat': case 'Zero': case 'Var': return false;
+      case 'Type': case 'Nat': case 'Point': case 'Zero': case 'Var': return false;
       case 'Pi': case 'Lambda': return containsEqRec(term.domain) || containsEqRec(term.body);
       case 'App': return containsEqRec(term.fn) || containsEqRec(term.arg);
       case 'Succ': return containsEqRec(term.value);

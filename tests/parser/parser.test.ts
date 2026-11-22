@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parse, ParseError } from '../../src/parser/parser';
 
-test('parser reads Nat, Zero, and Succ', () => {
+test('parser reads Nat, Point, Zero, and Succ', () => {
   assert.deepEqual(parse('Nat'), { kind: 'Nat' });
+  assert.deepEqual(parse('Point'), { kind: 'Point' });
   assert.deepEqual(parse('0'), { kind: 'Zero' });
   assert.deepEqual(parse('Succ 0'), { kind: 'Succ', value: { kind: 'Zero' } });
 });

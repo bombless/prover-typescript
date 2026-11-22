@@ -4,6 +4,7 @@ import {
   surfaceEq,
   surfaceLambda,
   surfaceNat,
+  surfacePoint,
   surfacePi,
   surfaceRefl,
   surfaceSucc,
@@ -80,6 +81,7 @@ class Parser {
       switch (token.text) {
         case 'Type': return surfaceSort;
         case 'Nat': return surfaceNat;
+        case 'Point': return surfacePoint;
         case 'Succ': return surfaceSucc(this.parseAtom());
         case 'Eq': return surfaceEq(this.parseAtom(), this.parseAtom(), this.parseAtom());
         case 'Refl': return surfaceRefl(this.parseAtom(), this.parseAtom());

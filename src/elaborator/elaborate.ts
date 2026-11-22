@@ -2,6 +2,7 @@ import {
   Term,
   Type,
   Nat,
+  Point,
   Zero,
   variable,
   pi,
@@ -56,6 +57,7 @@ export function elaborate(term: SurfaceTerm, context: LocalContext = [], environ
     }
     case 'App': return app(elaborate(term.fn, context, environment), elaborate(term.arg, context, environment));
     case 'Nat': return Nat;
+    case 'Point': return Point;
     case 'Zero': return Zero;
     case 'Succ': return succ(elaborate(term.value, context, environment));
     case 'NatRec': return natRec(

@@ -155,7 +155,6 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   compute_mul2: { name: "compute_mul2", type: eq(Nat, mulTerm(numeral(3), numeral(3)), numeral(9)) },
   compute_pow: { name: "compute_pow", type: eq(Nat, powTerm(numeral(2), numeral(3)), numeral(8)) },
   compute_pow2: { name: "compute_pow2", type: eq(Nat, powTerm(numeral(2), numeral(4)), numeral(16)) },
-  // Geometry: segment-length laws.
   // Geometry: segment congruence over points.
   seg_refl: { name: "seg_refl", type: segReflType },
   seg_sym: { name: "seg_sym", type: segSymType },

@@ -298,6 +298,118 @@ export const sssTwoEdgesProof: Term = lamChain(
   })()
 );
 
+/** Equal first sides: `AB = DE → AB + BC = DE + BC`. */
+export const chainRightType: Term = piChain(
+  [distType, Point, Point, Point, Point, Point, eq(Nat,
+    distTerm(variable(5, 'dist'), variable(4, 'A'), variable(3, 'B')),
+    distTerm(variable(5, 'dist'), variable(1, 'D'), variable(0, 'E')))],
+  ['dist', 'A', 'B', 'C', 'D', 'E', 'h'],
+  eq(Nat,
+    addTerm(distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B')), distTerm(variable(6, 'dist'), variable(4, 'B'), variable(3, 'C'))),
+    addTerm(distTerm(variable(6, 'dist'), variable(2, 'D'), variable(1, 'E')), distTerm(variable(6, 'dist'), variable(4, 'B'), variable(3, 'C'))))
+);
+
+export const chainRightProof: Term = lamChain(
+  [distType, Point, Point, Point, Point, Point, eq(Nat,
+    distTerm(variable(5, 'dist'), variable(4, 'A'), variable(3, 'B')),
+    distTerm(variable(5, 'dist'), variable(1, 'D'), variable(0, 'E')))],
+  ['dist', 'A', 'B', 'C', 'D', 'E', 'h'],
+  app(
+    app(
+      app(
+        app(addRightCongrProof,
+          distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B'))),
+        distTerm(variable(6, 'dist'), variable(2, 'D'), variable(1, 'E'))),
+      distTerm(variable(6, 'dist'), variable(4, 'B'), variable(3, 'C'))),
+    variable(0, 'h')
+  )
+);
+
+/** Equal second sides: `BC = EF → AB + BC = AB + EF`. */
+export const chainLeftType: Term = piChain(
+  [distType, Point, Point, Point, Point, Point, eq(Nat,
+    distTerm(variable(5, 'dist'), variable(3, 'B'), variable(2, 'C')),
+    distTerm(variable(5, 'dist'), variable(1, 'E'), variable(0, 'F')))],
+  ['dist', 'A', 'B', 'C', 'E', 'F', 'h'],
+  eq(Nat,
+    addTerm(distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B')), distTerm(variable(6, 'dist'), variable(4, 'B'), variable(3, 'C'))),
+    addTerm(distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B')), distTerm(variable(6, 'dist'), variable(2, 'E'), variable(1, 'F'))))
+);
+
+export const chainLeftProof: Term = lamChain(
+  [distType, Point, Point, Point, Point, Point, eq(Nat,
+    distTerm(variable(5, 'dist'), variable(3, 'B'), variable(2, 'C')),
+    distTerm(variable(5, 'dist'), variable(1, 'E'), variable(0, 'F')))],
+  ['dist', 'A', 'B', 'C', 'E', 'F', 'h'],
+  app(
+    app(
+      app(
+        app(addLeftCongrProof,
+          distTerm(variable(6, 'dist'), variable(4, 'B'), variable(3, 'C'))),
+        distTerm(variable(6, 'dist'), variable(2, 'E'), variable(1, 'F'))),
+      distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B'))),
+    variable(0, 'h')
+  )
+);
+
+/**
+ * Three-edge SSS: matching side pairs `AB=DE`, `BC=EF`, `AC=DF` give equal
+ * triangle broken chains `AB + BC + AC = DE + EF + DF`.
+ */
+export const sssThreeEdgesType: Term = piChain(
+  [
+    distType, Point, Point, Point, Point, Point, Point,
+    eq(Nat, distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B')),
+            distTerm(variable(6, 'dist'), variable(2, 'D'), variable(1, 'E'))),
+    eq(Nat, distTerm(variable(7, 'dist'), variable(5, 'B'), variable(4, 'C')),
+            distTerm(variable(7, 'dist'), variable(2, 'E'), variable(1, 'F'))),
+    eq(Nat, distTerm(variable(8, 'dist'), variable(7, 'A'), variable(5, 'C')),
+            distTerm(variable(8, 'dist'), variable(4, 'D'), variable(2, 'F'))),
+  ],
+  ['dist', 'A', 'B', 'C', 'D', 'E', 'F', 'h1', 'h2', 'h3'],
+  eq(Nat,
+    addTerm(
+      addTerm(distTerm(variable(9, 'dist'), variable(8, 'A'), variable(7, 'B')), distTerm(variable(9, 'dist'), variable(7, 'B'), variable(6, 'C'))),
+      distTerm(variable(9, 'dist'), variable(8, 'A'), variable(6, 'C'))),
+    addTerm(
+      addTerm(distTerm(variable(9, 'dist'), variable(5, 'D'), variable(4, 'E')), distTerm(variable(9, 'dist'), variable(4, 'E'), variable(3, 'F'))),
+      distTerm(variable(9, 'dist'), variable(5, 'D'), variable(3, 'F'))))
+);
+
+export const sssThreeEdgesProof: Term = lamChain(
+  [
+    distType, Point, Point, Point, Point, Point, Point,
+    eq(Nat, distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B')),
+            distTerm(variable(6, 'dist'), variable(2, 'D'), variable(1, 'E'))),
+    eq(Nat, distTerm(variable(7, 'dist'), variable(5, 'B'), variable(4, 'C')),
+            distTerm(variable(7, 'dist'), variable(2, 'E'), variable(1, 'F'))),
+    eq(Nat, distTerm(variable(8, 'dist'), variable(7, 'A'), variable(5, 'C')),
+            distTerm(variable(8, 'dist'), variable(4, 'D'), variable(2, 'F'))),
+  ],
+  ['dist', 'A', 'B', 'C', 'D', 'E', 'F', 'h1', 'h2', 'h3'],
+  (() => {
+    const ab = distTerm(variable(9, 'dist'), variable(8, 'A'), variable(7, 'B'));
+    const bc = distTerm(variable(9, 'dist'), variable(7, 'B'), variable(6, 'C'));
+    const ac = distTerm(variable(9, 'dist'), variable(8, 'A'), variable(6, 'C'));
+    const de = distTerm(variable(9, 'dist'), variable(5, 'D'), variable(4, 'E'));
+    const ef = distTerm(variable(9, 'dist'), variable(4, 'E'), variable(3, 'F'));
+    const df = distTerm(variable(9, 'dist'), variable(5, 'D'), variable(3, 'F'));
+    const lhs = addTerm(addTerm(ab, bc), ac);
+    const mid = addTerm(addTerm(de, ef), ac);
+    const rhs = addTerm(addTerm(de, ef), df);
+    // Two-edge matching sides: AB + BC = DE + EF.
+    const p1 = app(app(app(app(app(app(app(app(app(
+      sssTwoEdgesProof,
+      variable(9, 'dist')), variable(8, 'A')), variable(7, 'B')), variable(6, 'C')),
+      variable(5, 'D')), variable(4, 'E')), variable(3, 'F')), variable(2, 'h1')), variable(1, 'h2'));
+    // Extend both two-edge chains on the right by AC.
+    const p2 = app(app(app(app(addRightCongrProof, addTerm(ab, bc)), addTerm(de, ef)), ac), p1);
+    // Replace AC by DF on the right chain.
+    const p3 = app(app(app(app(addLeftCongrProof, ac), df), addTerm(de, ef)), variable(0, 'h3'));
+    return app(app(app(app(app(transNatProof, lhs), mid), rhs), p2), p3);
+  })()
+);
+
 /* ----------------------------- closed perimeter computations ----------- */
 
 /** 3-4-5 triangle: `3 + 4 + 5 = 12`. */

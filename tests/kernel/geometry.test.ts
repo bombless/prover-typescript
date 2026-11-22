@@ -21,6 +21,12 @@ import {
   betweenProof,
   sssTwoEdgesType,
   sssTwoEdgesProof,
+  chainRightType,
+  chainRightProof,
+  chainLeftType,
+  chainLeftProof,
+  sssThreeEdgesType,
+  sssThreeEdgesProof,
   closedPerimeterTypes,
 } from '../../src/library/geometry';
 
@@ -57,6 +63,9 @@ test('every point-level geometry lemma checks against its proposition type', () 
     [isoSidesProof, isoSidesType],
     [betweenProof, betweenType],
     [sssTwoEdgesProof, sssTwoEdgesType],
+    [chainRightProof, chainRightType],
+    [chainLeftProof, chainLeftType],
+    [sssThreeEdgesProof, sssThreeEdgesType],
   ] as const;
 
   for (const [proof, type] of lemmas) {
@@ -66,7 +75,7 @@ test('every point-level geometry lemma checks against its proposition type', () 
 });
 
 test('point-level lemmas keep Point binders in their inferred type', () => {
-  for (const type of [segReflType, segSymType, segTransType, isoSidesType, betweenType, sssTwoEdgesType]) {
+  for (const type of [segReflType, segSymType, segTransType, isoSidesType, betweenType, sssTwoEdgesType, chainRightType, chainLeftType, sssThreeEdgesType]) {
     check([], type, { kind: 'Type' });
   }
 });

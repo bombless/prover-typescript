@@ -27,6 +27,12 @@ import {
   betweenProof,
   sssTwoEdgesType,
   sssTwoEdgesProof,
+  chainRightType,
+  chainRightProof,
+  chainLeftType,
+  chainLeftProof,
+  sssThreeEdgesType,
+  sssThreeEdgesProof,
   perim345Type,
   perimEquilateral3Type,
   perimIsosceles558Type,
@@ -121,6 +127,9 @@ const PROOF_ALIASES: Record<string, CoreTerm> = {
   iso_sides: isoSidesProof,
   between: betweenProof,
   sss_two_edges: sssTwoEdgesProof,
+  chain_right: chainRightProof,
+  chain_left: chainLeftProof,
+  sss_three_edges: sssThreeEdgesProof,
 };
 
 const REAL_THEOREMS: Record<string, RealTheorem> = {
@@ -154,6 +163,9 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   iso_sides: { name: "iso_sides", type: isoSidesType },
   between: { name: "between", type: betweenType },
   sss_two_edges: { name: "sss_two_edges", type: sssTwoEdgesType },
+  chain_right: { name: "chain_right", type: chainRightType },
+  chain_left: { name: "chain_left", type: chainLeftType },
+  sss_three_edges: { name: "sss_three_edges", type: sssThreeEdgesType },
   // Geometry: closed triangle perimeters.
   tri_perim_345: { name: "tri_perim_345", type: perim345Type },
   tri_perim_equilateral3: { name: "tri_perim_equilateral3", type: perimEquilateral3Type },

@@ -20,7 +20,7 @@ test("registry has all exercises in stable chapter order", () => {
     "Addition Laws", "Multiplication", "Powers", "Computation",
     "Segments & Congruence", "Triangle Perimeters", "Quadrilaterals & Polygons",
   ]);
-  assert.deepEqual(EXERCISES.map((exercise) => exercise.number), Array.from({ length: 43 }, (_, i) => i + 1));
+  assert.deepEqual(EXERCISES.map((exercise) => exercise.number), Array.from({ length: 46 }, (_, i) => i + 1));
   assert.deepEqual(EXERCISES.map((exercise) => exercise.id), [
     "numbers.zero_eq_zero", "numbers.identity", "numbers.zero_add",
     "addition.add_zero", "addition.add_succ", "equality.transport", "equality.rewrite",
@@ -29,12 +29,12 @@ test("registry has all exercises in stable chapter order", () => {
     "mul.zero_left", "mul.succ_left", "mul.compute",
     "pow.zero", "pow.succ", "pow.compute",
     "compute.add", "compute.mul", "compute.pow",
-    "cong.refl", "cong.sym", "cong.trans", "cong.isosceles", "cong.between", "cong.sss",
+    "cong.refl", "cong.sym", "cong.trans", "cong.isosceles", "cong.between", "cong.sss", "cong.chain_right", "cong.chain_left", "cong.sss3",
     "tri.345", "tri.equilateral3", "tri.isosceles558", "tri.equilateral5", "tri.6810", "tri.equilateral4", "tri.equilateral6",
     "rect.35", "square.4", "rect.46", "square.5", "pentagon.3", "hexagon.4", "octagon.2", "rect.58", "square.6",
   ]);
-  assert.equal(NATURAL_NUMBERS_LESSON.exercises.length, 43);
-  assert.equal(NATURAL_NUMBERS_LESSON.theorems.length, 43);
+  assert.equal(NATURAL_NUMBERS_LESSON.exercises.length, 46);
+  assert.equal(NATURAL_NUMBERS_LESSON.theorems.length, 46);
 });
 
 test("registry exercises all load real proof goals", () => {
@@ -78,6 +78,9 @@ test("registered exercises complete through RealProofEngine and Kernel", () => {
   prove(engine, "iso_sides", ["exact iso_sides"]);
   prove(engine, "between", ["exact between"]);
   prove(engine, "sss_two_edges", ["exact sss_two_edges"]);
+  prove(engine, "chain_right", ["exact chain_right"]);
+  prove(engine, "chain_left", ["exact chain_left"]);
+  prove(engine, "sss_three_edges", ["exact sss_three_edges"]);
   // Geometry: closed triangle perimeters.
   prove(engine, "tri_perim_345", ["rfl"]);
   prove(engine, "tri_perim_equilateral3", ["rfl"]);

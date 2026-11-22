@@ -5,8 +5,8 @@ import { tacticSession, TacticError, type TacticSession } from "../proof/tactic"
 import { show } from "../kernel/typecheck";
 import { type Term as CoreTerm, Nat, Zero, variable, pi, eq, app } from "../syntax/ast";
 import { add, addTerm, numeral } from "../library/nat";
-import { addZeroType, addZeroProof } from "../library/add-zero";
-import { zeroAddType, zeroAddProof } from "../library/zero-add";
+import { addZeroType } from "../library/add-zero";
+import { zeroAddType } from "../library/zero-add";
 import { succAddType } from "../library/succ-add";
 import { addSuccProof, addSuccType } from "../library/add-succ";
 import { addAssocType, addAssocProof } from "../library/add-assoc";
@@ -15,12 +15,18 @@ import { mul, mulTerm } from "../library/mul";
 import { pow, powTerm } from "../library/pow";
 import { zeroMulType, succMulType, powZeroType, powSuccType } from "../library/mul-law";
 import {
-  addRightCongrType,
-  addRightCongrProof,
-  addLeftCongrType,
-  addLeftCongrProof,
-  perimSwapType,
-  perimSwapProof,
+  segReflType,
+  segReflProof,
+  segSymType,
+  segSymProof,
+  segTransType,
+  segTransProof,
+  isoSidesType,
+  isoSidesProof,
+  betweenType,
+  betweenProof,
+  sssTwoEdgesType,
+  sssTwoEdgesProof,
   perim345Type,
   perimEquilateral3Type,
   perimIsosceles558Type,
@@ -109,13 +115,12 @@ const PROOF_ALIASES: Record<string, CoreTerm> = {
   add_succ: addSuccProof,
   add_assoc: addAssocProof,
   add_comm: addCommProof,
-  seg_add_zero: addZeroProof,
-  seg_zero_add: zeroAddProof,
-  seg_comm: addCommProof,
-  seg_assoc: addAssocProof,
-  seg_congr_right: addRightCongrProof,
-  seg_congr_left: addLeftCongrProof,
-  perim_swap: perimSwapProof,
+  seg_refl: segReflProof,
+  seg_sym: segSymProof,
+  seg_trans: segTransProof,
+  iso_sides: isoSidesProof,
+  between: betweenProof,
+  sss_two_edges: sssTwoEdgesProof,
 };
 
 const REAL_THEOREMS: Record<string, RealTheorem> = {
@@ -142,12 +147,13 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   compute_pow: { name: "compute_pow", type: eq(Nat, powTerm(numeral(2), numeral(3)), numeral(8)) },
   compute_pow2: { name: "compute_pow2", type: eq(Nat, powTerm(numeral(2), numeral(4)), numeral(16)) },
   // Geometry: segment-length laws.
-  seg_add_zero: { name: "seg_add_zero", type: addZeroType },
-  seg_zero_add: { name: "seg_zero_add", type: zeroAddType },
-  seg_comm: { name: "seg_comm", type: addCommType },
-  seg_assoc: { name: "seg_assoc", type: addAssocType },
-  seg_congr_right: { name: "seg_congr_right", type: addRightCongrType },
-  seg_congr_left: { name: "seg_congr_left", type: addLeftCongrType },
+  // Geometry: segment congruence over points.
+  seg_refl: { name: "seg_refl", type: segReflType },
+  seg_sym: { name: "seg_sym", type: segSymType },
+  seg_trans: { name: "seg_trans", type: segTransType },
+  iso_sides: { name: "iso_sides", type: isoSidesType },
+  between: { name: "between", type: betweenType },
+  sss_two_edges: { name: "sss_two_edges", type: sssTwoEdgesType },
   // Geometry: closed triangle perimeters.
   tri_perim_345: { name: "tri_perim_345", type: perim345Type },
   tri_perim_equilateral3: { name: "tri_perim_equilateral3", type: perimEquilateral3Type },
@@ -166,7 +172,6 @@ const REAL_THEOREMS: Record<string, RealTheorem> = {
   rect_perim_58: { name: "rect_perim_58", type: rectPerim58Type },
   square_perim_6: { name: "square_perim_6", type: squarePerim6Type },
   octagon_perim_2: { name: "octagon_perim_2", type: octagonPerim2Type },
-  perim_swap: { name: "perim_swap", type: perimSwapType },
 };
 
 function cloneView(state: ProofStateView): ProofStateView {

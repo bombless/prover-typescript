@@ -18,9 +18,9 @@ test("registry has all exercises in stable chapter order", () => {
   assert.deepEqual(CHAPTERS.map((chapter) => chapter.title), [
     "Natural Numbers", "Addition", "Equality & Rewrite", "Induction",
     "Addition Laws", "Multiplication", "Powers", "Computation",
-    "Segments", "Triangle Perimeters", "Quadrilaterals & Polygons",
+    "Segments & Congruence", "Triangle Perimeters", "Quadrilaterals & Polygons",
   ]);
-  assert.deepEqual(EXERCISES.map((exercise) => exercise.number), Array.from({ length: 44 }, (_, i) => i + 1));
+  assert.deepEqual(EXERCISES.map((exercise) => exercise.number), Array.from({ length: 43 }, (_, i) => i + 1));
   assert.deepEqual(EXERCISES.map((exercise) => exercise.id), [
     "numbers.zero_eq_zero", "numbers.identity", "numbers.zero_add",
     "addition.add_zero", "addition.add_succ", "equality.transport", "equality.rewrite",
@@ -29,12 +29,12 @@ test("registry has all exercises in stable chapter order", () => {
     "mul.zero_left", "mul.succ_left", "mul.compute",
     "pow.zero", "pow.succ", "pow.compute",
     "compute.add", "compute.mul", "compute.pow",
-    "seg.add_zero", "seg.zero_add", "seg.comm", "seg.assoc", "seg.congr", "seg.congr_left",
+    "cong.refl", "cong.sym", "cong.trans", "cong.isosceles", "cong.between", "cong.sss",
     "tri.345", "tri.equilateral3", "tri.isosceles558", "tri.equilateral5", "tri.6810", "tri.equilateral4", "tri.equilateral6",
-    "rect.35", "square.4", "rect.46", "square.5", "pentagon.3", "hexagon.4", "octagon.2", "rect.58", "square.6", "perim.swap",
+    "rect.35", "square.4", "rect.46", "square.5", "pentagon.3", "hexagon.4", "octagon.2", "rect.58", "square.6",
   ]);
-  assert.equal(NATURAL_NUMBERS_LESSON.exercises.length, 44);
-  assert.equal(NATURAL_NUMBERS_LESSON.theorems.length, 44);
+  assert.equal(NATURAL_NUMBERS_LESSON.exercises.length, 43);
+  assert.equal(NATURAL_NUMBERS_LESSON.theorems.length, 43);
 });
 
 test("registry exercises all load real proof goals", () => {
@@ -71,13 +71,13 @@ test("registered exercises complete through RealProofEngine and Kernel", () => {
   prove(engine, "compute_add", ["rfl"]);
   prove(engine, "compute_mul2", ["rfl"]);
   prove(engine, "compute_pow2", ["rfl"]);
-  // Geometry: segment laws.
-  prove(engine, "seg_add_zero", ["exact seg_add_zero"]);
-  prove(engine, "seg_zero_add", ["exact seg_zero_add"]);
-  prove(engine, "seg_comm", ["exact seg_comm"]);
-  prove(engine, "seg_assoc", ["exact seg_assoc"]);
-  prove(engine, "seg_congr_right", ["exact seg_congr_right"]);
-  prove(engine, "seg_congr_left", ["exact seg_congr_left"]);
+  // Geometry: segment congruence over points.
+  prove(engine, "seg_refl", ["exact seg_refl"]);
+  prove(engine, "seg_sym", ["exact seg_sym"]);
+  prove(engine, "seg_trans", ["exact seg_trans"]);
+  prove(engine, "iso_sides", ["exact iso_sides"]);
+  prove(engine, "between", ["exact between"]);
+  prove(engine, "sss_two_edges", ["exact sss_two_edges"]);
   // Geometry: closed triangle perimeters.
   prove(engine, "tri_perim_345", ["rfl"]);
   prove(engine, "tri_perim_equilateral3", ["rfl"]);
@@ -96,7 +96,6 @@ test("registered exercises complete through RealProofEngine and Kernel", () => {
   prove(engine, "octagon_perim_2", ["rfl"]);
   prove(engine, "rect_perim_58", ["rfl"]);
   prove(engine, "square_perim_6", ["rfl"]);
-  prove(engine, "perim_swap", ["exact perim_swap"]);
 });
 
 test("rewrite success and failure are real and failed rewrite rolls back", () => {
@@ -167,7 +166,7 @@ test("next exercise follows chapter order", () => {
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "numbers.zero_eq_zero")?.id, "numbers.identity");
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "addition.add_succ")?.id, "equality.transport");
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "induction.succ_add_zero")?.id, "laws.assoc");
-  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "compute.pow")?.id, "seg.add_zero");
+  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "compute.pow")?.id, "cong.refl");
   assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "hexagon.4")?.id, "octagon.2");
-  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "perim.swap"), null);
+  assert.equal(nextExercise(NATURAL_NUMBERS_LESSON, "square.6"), null);
 });

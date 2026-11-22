@@ -1,184 +1,301 @@
-import { Term, Nat, variable, pi, lambda, app, eq, refl, eqRec } from '../syntax/ast';
+import { Term, Nat, Point, variable, pi, lambda, app, eq, refl, eqRec } from '../syntax/ast';
 import { addTerm, numeral } from './nat';
 import { mulTerm } from './mul';
-import { addCommProof } from './add-comm';
 
 /**
- * Geometry in this kernel is built on natural-number lengths: every segment,
- * side, or perimeter is a Nat. The propositions below are length equalities
- * that a geometry course states about segments, triangles, and polygons, but
- * each proof term still crosses the standard Kernel type checker.
+ * Geometry in this kernel is stated over opaque `Point` objects. A segment
+ * length is obtained from a distance function `dist : Point → Point → Nat`
+ * passed in as a hypothesis; segment congruence is an equality of such
+ * lengths. Every proof term below still crosses the standard Kernel checker.
  */
 
-/* ------------------------------------------ right-congruence of addition */
+/** `dist : Point → Point → Nat`. */
+export const distType: Term = pi(Point, pi(Point, Nat, 'q'), 'p');
 
-/**
- * `(x y z : Nat) → x = y → x + z = y + z`
- *
- * Equal lengths extended by the same remaining segment stay equal.
- */
-export const addRightCongrType: Term = pi(
-  Nat,
-  pi(
-    Nat,
-    pi(
-      Nat,
-      pi(
-        eq(Nat, variable(2, 'x'), variable(1, 'y')),
-        eq(Nat, addTerm(variable(3, 'x'), variable(1, 'z')), addTerm(variable(2, 'y'), variable(1, 'z'))),
-        'h'
-      ),
-      'z'
-    ),
-    'y'
-  ),
-  'x'
+function distTerm(dist: Term, p: Term, q: Term): Term {
+  return app(app(dist, p), q);
+}
+
+/** Build a nested Pi chain outer binder first; `body` is the innermost type. */
+function piChain(domains: readonly Term[], names: readonly string[], body: Term): Term {
+  let result = body;
+  for (let i = domains.length - 1; i >= 0; i -= 1) result = pi(domains[i], result, names[i]);
+  return result;
+}
+
+/** Build a nested lambda chain outer binder first; `body` is the innermost term. */
+function lamChain(domains: readonly Term[], names: readonly string[], body: Term): Term {
+  let result = body;
+  for (let i = domains.length - 1; i >= 0; i -= 1) result = lambda(domains[i], result, names[i]);
+  return result;
+}
+
+/* --------------------------- equality symmetry and transitivity ------- */
+
+/** `(x y : Nat) → x = y → y = x`. */
+export const symmNatType: Term = piChain(
+  [Nat, Nat, eq(Nat, variable(1, 'x'), variable(0, 'y'))],
+  ['x', 'y', 'h'],
+  eq(Nat, variable(1, 'y'), variable(2, 'x'))
 );
 
-/**
- * Transport along `h : x = y` with motive `Q(t) = x + z = t + z`. The
- * reflexivity case is `x + z = x + z`; Eq.rec moves it to `y`.
- */
-export const addRightCongrProof: Term = lambda(
-  Nat,
-  lambda(
-    Nat,
+export const symmNatProof: Term = lamChain(
+  [Nat, Nat, eq(Nat, variable(1, 'x'), variable(0, 'y'))],
+  ['x', 'y', 'h'],
+  eqRec(
+    lambda(Nat, eq(Nat, variable(0, 't'), variable(3, 'x')), 't'),
+    refl(Nat, variable(2, 'x')),
+    variable(2, 'x'),
+    variable(1, 'y'),
+    variable(0, 'h')
+  )
+);
+
+/** `(x y z : Nat) → x = y → y = z → x = z`. */
+export const transNatType: Term = piChain(
+  [
+    Nat, Nat, Nat,
+    eq(Nat, variable(2, 'x'), variable(1, 'y')),
+    eq(Nat, variable(2, 'y'), variable(1, 'z')),
+  ],
+  ['x', 'y', 'z', 'h1', 'h2'],
+  eq(Nat, variable(4, 'x'), variable(2, 'z'))
+);
+
+export const transNatProof: Term = lamChain(
+  [
+    Nat, Nat, Nat,
+    eq(Nat, variable(2, 'x'), variable(1, 'y')),
+    eq(Nat, variable(2, 'y'), variable(1, 'z')),
+  ],
+  ['x', 'y', 'z', 'h1', 'h2'],
+  eqRec(
+    lambda(Nat, eq(Nat, variable(5, 'x'), variable(0, 't')), 't'),
+    variable(1, 'h1'),
+    variable(3, 'y'),
+    variable(2, 'z'),
+    variable(0, 'h2')
+  )
+);
+
+/* --------------------------- addition congruence helpers --------------- */
+
+/** `(x y z : Nat) → x = y → x + z = y + z`. */
+export const addRightCongrType: Term = piChain(
+  [Nat, Nat, Nat, eq(Nat, variable(2, 'x'), variable(1, 'y'))],
+  ['x', 'y', 'z', 'h'],
+  eq(Nat, addTerm(variable(3, 'x'), variable(1, 'z')), addTerm(variable(2, 'y'), variable(1, 'z')))
+);
+
+export const addRightCongrProof: Term = lamChain(
+  [Nat, Nat, Nat, eq(Nat, variable(2, 'x'), variable(1, 'y'))],
+  ['x', 'y', 'z', 'h'],
+  eqRec(
     lambda(
       Nat,
-      lambda(
-        eq(Nat, variable(2, 'x'), variable(1, 'y')),
-        eqRec(
-          lambda(
-            Nat,
-            eq(
-              Nat,
-              addTerm(variable(4, 'x'), variable(2, 'z')),
-              addTerm(variable(0, 't'), variable(2, 'z'))
-            ),
-            't'
-          ),
-          refl(Nat, addTerm(variable(3, 'x'), variable(1, 'z'))),
-          variable(3, 'x'),
-          variable(2, 'y'),
-          variable(0, 'h')
-        ),
-        'h'
-      ),
-      'z'
+      eq(Nat, addTerm(variable(4, 'x'), variable(2, 'z')), addTerm(variable(0, 't'), variable(2, 'z'))),
+      't'
     ),
-    'y'
-  ),
-  'x'
+    refl(Nat, addTerm(variable(3, 'x'), variable(1, 'z'))),
+    variable(3, 'x'),
+    variable(2, 'y'),
+    variable(0, 'h')
+  )
 );
 
-/**
- * `(x y z : Nat) → x = y → z + x = z + y`
- *
- * Equal segments substituted on the left of a common segment stay equal.
- */
-export const addLeftCongrType: Term = pi(
-  Nat,
-  pi(
-    Nat,
-    pi(
-      Nat,
-      pi(
-        eq(Nat, variable(2, 'x'), variable(1, 'y')),
-        eq(Nat, addTerm(variable(1, 'z'), variable(3, 'x')), addTerm(variable(1, 'z'), variable(2, 'y'))),
-        'h'
-      ),
-      'z'
-    ),
-    'y'
-  ),
-  'x'
+/** `(x y z : Nat) → x = y → z + x = z + y`. */
+export const addLeftCongrType: Term = piChain(
+  [Nat, Nat, Nat, eq(Nat, variable(2, 'x'), variable(1, 'y'))],
+  ['x', 'y', 'z', 'h'],
+  eq(Nat, addTerm(variable(1, 'z'), variable(3, 'x')), addTerm(variable(1, 'z'), variable(2, 'y')))
 );
 
-export const addLeftCongrProof: Term = lambda(
-  Nat,
-  lambda(
-    Nat,
+export const addLeftCongrProof: Term = lamChain(
+  [Nat, Nat, Nat, eq(Nat, variable(2, 'x'), variable(1, 'y'))],
+  ['x', 'y', 'z', 'h'],
+  eqRec(
     lambda(
       Nat,
-      lambda(
-        eq(Nat, variable(2, 'x'), variable(1, 'y')),
-        eqRec(
-          lambda(
-            Nat,
-            eq(
-              Nat,
-              addTerm(variable(2, 'z'), variable(4, 'x')),
-              addTerm(variable(2, 'z'), variable(0, 't'))
-            ),
-            't'
-          ),
-          refl(Nat, addTerm(variable(1, 'z'), variable(3, 'x'))),
-          variable(3, 'x'),
-          variable(2, 'y'),
-          variable(0, 'h')
-        ),
-        'h'
-      ),
-      'z'
+      eq(Nat, addTerm(variable(2, 'z'), variable(4, 'x')), addTerm(variable(2, 'z'), variable(0, 't'))),
+      't'
     ),
-    'y'
-  ),
-  'x'
+    refl(Nat, addTerm(variable(1, 'z'), variable(3, 'x'))),
+    variable(3, 'x'),
+    variable(2, 'y'),
+    variable(0, 'h')
+  )
 );
 
-/* --------------------------------------------- perimeter base swapping */
+/* --------------------------- segment congruence (point level) ---------- */
 
-/**
- * `(a b c : Nat) → a + b + c = b + a + c`
- *
- * Swapping the two sides that meet at a vertex does not change the perimeter.
- */
-export const perimSwapType: Term = pi(
-  Nat,
-  pi(
-    Nat,
-    pi(
-      Nat,
-      eq(
-        Nat,
-        addTerm(addTerm(variable(2, 'a'), variable(1, 'b')), variable(0, 'c')),
-        addTerm(addTerm(variable(1, 'b'), variable(2, 'a')), variable(0, 'c'))
-      ),
-      'c'
-    ),
-    'b'
-  ),
-  'a'
+/** Any segment is congruent to itself: `dist A B = dist A B`. */
+export const segReflType: Term = piChain(
+  [distType, Point, Point],
+  ['dist', 'A', 'B'],
+  eq(Nat, distTerm(variable(2, 'dist'), variable(1, 'A'), variable(0, 'B')),
+          distTerm(variable(2, 'dist'), variable(1, 'A'), variable(0, 'B')))
 );
 
-/**
- * `add_comm a b : a + b = b + a`, then `addRightCongr` extends both sides by
- * the remaining side `c`.
- */
-export const perimSwapProof: Term = lambda(
-  Nat,
-  lambda(
-    Nat,
-    lambda(
-      Nat,
+export const segReflProof: Term = lamChain(
+  [distType, Point, Point],
+  ['dist', 'A', 'B'],
+  refl(Nat, distTerm(variable(2, 'dist'), variable(1, 'A'), variable(0, 'B')))
+);
+
+/** Congruence is symmetric: `dist A B = dist C D → dist C D = dist A B`. */
+export const segSymType: Term = piChain(
+  [distType, Point, Point, Point, Point, eq(Nat,
+    distTerm(variable(4, 'dist'), variable(3, 'A'), variable(2, 'B')),
+    distTerm(variable(4, 'dist'), variable(1, 'C'), variable(0, 'D')))],
+  ['dist', 'A', 'B', 'C', 'D', 'h'],
+  eq(Nat, distTerm(variable(5, 'dist'), variable(2, 'C'), variable(1, 'D')),
+          distTerm(variable(5, 'dist'), variable(4, 'A'), variable(3, 'B')))
+);
+
+export const segSymProof: Term = lamChain(
+  [distType, Point, Point, Point, Point, eq(Nat,
+    distTerm(variable(4, 'dist'), variable(3, 'A'), variable(2, 'B')),
+    distTerm(variable(4, 'dist'), variable(1, 'C'), variable(0, 'D')))],
+  ['dist', 'A', 'B', 'C', 'D', 'h'],
+  app(
+    app(
+      app(symmNatProof,
+        distTerm(variable(5, 'dist'), variable(4, 'A'), variable(3, 'B'))),
+      distTerm(variable(5, 'dist'), variable(2, 'C'), variable(1, 'D'))),
+    variable(0, 'h')
+  )
+);
+
+/** Congruence is transitive: `AB = CD → CD = EF → AB = EF`. */
+export const segTransType: Term = piChain(
+  [
+    distType, Point, Point, Point, Point, Point, Point,
+    eq(Nat, distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B')),
+            distTerm(variable(6, 'dist'), variable(3, 'C'), variable(2, 'D'))),
+    eq(Nat, distTerm(variable(7, 'dist'), variable(4, 'C'), variable(3, 'D')),
+            distTerm(variable(7, 'dist'), variable(2, 'E'), variable(1, 'F'))),
+  ],
+  ['dist', 'A', 'B', 'C', 'D', 'E', 'F', 'h1', 'h2'],
+  eq(Nat, distTerm(variable(8, 'dist'), variable(7, 'A'), variable(6, 'B')),
+          distTerm(variable(8, 'dist'), variable(3, 'E'), variable(2, 'F')))
+);
+
+export const segTransProof: Term = lamChain(
+  [
+    distType, Point, Point, Point, Point, Point, Point,
+    eq(Nat, distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B')),
+            distTerm(variable(6, 'dist'), variable(3, 'C'), variable(2, 'D'))),
+    eq(Nat, distTerm(variable(7, 'dist'), variable(4, 'C'), variable(3, 'D')),
+            distTerm(variable(7, 'dist'), variable(2, 'E'), variable(1, 'F'))),
+  ],
+  ['dist', 'A', 'B', 'C', 'D', 'E', 'F', 'h1', 'h2'],
+  app(
+    app(
       app(
         app(
-          app(
-            app(
-              addRightCongrProof,
-              addTerm(variable(2, 'a'), variable(1, 'b'))
-            ),
-            addTerm(variable(1, 'b'), variable(2, 'a'))
-          ),
-          variable(0, 'c')
-        ),
-        app(app(addCommProof, variable(2, 'a')), variable(1, 'b'))
-      ),
-      'c'
+          app(transNatProof,
+            distTerm(variable(8, 'dist'), variable(7, 'A'), variable(6, 'B'))),
+          distTerm(variable(8, 'dist'), variable(5, 'C'), variable(4, 'D'))),
+        distTerm(variable(8, 'dist'), variable(3, 'E'), variable(2, 'F'))),
+      variable(1, 'h1')
     ),
-    'b'
-  ),
-  'a'
+    variable(0, 'h2')
+  )
+);
+
+/** Isosceles: equal legs give equal two-edge chains `AB + BC = AC + BC`. */
+export const isoSidesType: Term = piChain(
+  [distType, Point, Point, Point, eq(Nat,
+    distTerm(variable(3, 'dist'), variable(2, 'A'), variable(1, 'B')),
+    distTerm(variable(3, 'dist'), variable(2, 'A'), variable(0, 'C')))],
+  ['dist', 'A', 'B', 'C', 'h'],
+  eq(Nat,
+    addTerm(distTerm(variable(4, 'dist'), variable(3, 'A'), variable(2, 'B')), distTerm(variable(4, 'dist'), variable(2, 'B'), variable(1, 'C'))),
+    addTerm(distTerm(variable(4, 'dist'), variable(3, 'A'), variable(1, 'C')), distTerm(variable(4, 'dist'), variable(2, 'B'), variable(1, 'C'))))
+);
+
+export const isoSidesProof: Term = lamChain(
+  [distType, Point, Point, Point, eq(Nat,
+    distTerm(variable(3, 'dist'), variable(2, 'A'), variable(1, 'B')),
+    distTerm(variable(3, 'dist'), variable(2, 'A'), variable(0, 'C')))],
+  ['dist', 'A', 'B', 'C', 'h'],
+  app(
+    app(
+      app(
+        app(addRightCongrProof,
+          distTerm(variable(4, 'dist'), variable(3, 'A'), variable(2, 'B'))),
+        distTerm(variable(4, 'dist'), variable(3, 'A'), variable(1, 'C'))),
+      distTerm(variable(4, 'dist'), variable(2, 'B'), variable(1, 'C'))),
+    variable(0, 'h')
+  )
+);
+
+/**
+ * Betweenness: if `AC = AB + BC` (B lies between A and C), then the reverse
+ * equality `AB + BC = AC` holds by symmetry.
+ */
+export const betweenType: Term = piChain(
+  [distType, Point, Point, Point, eq(Nat,
+    distTerm(variable(3, 'dist'), variable(2, 'A'), variable(0, 'C')),
+    addTerm(distTerm(variable(3, 'dist'), variable(2, 'A'), variable(1, 'B')), distTerm(variable(3, 'dist'), variable(1, 'B'), variable(0, 'C'))))],
+  ['dist', 'A', 'B', 'C', 'h'],
+  eq(Nat,
+    addTerm(distTerm(variable(4, 'dist'), variable(3, 'A'), variable(2, 'B')), distTerm(variable(4, 'dist'), variable(2, 'B'), variable(1, 'C'))),
+    distTerm(variable(4, 'dist'), variable(3, 'A'), variable(1, 'C')))
+);
+
+export const betweenProof: Term = lamChain(
+  [distType, Point, Point, Point, eq(Nat,
+    distTerm(variable(3, 'dist'), variable(2, 'A'), variable(0, 'C')),
+    addTerm(distTerm(variable(3, 'dist'), variable(2, 'A'), variable(1, 'B')), distTerm(variable(3, 'dist'), variable(1, 'B'), variable(0, 'C'))))],
+  ['dist', 'A', 'B', 'C', 'h'],
+  app(
+    app(
+      app(symmNatProof,
+        distTerm(variable(4, 'dist'), variable(3, 'A'), variable(1, 'C'))),
+      addTerm(distTerm(variable(4, 'dist'), variable(3, 'A'), variable(2, 'B')), distTerm(variable(4, 'dist'), variable(2, 'B'), variable(1, 'C')))),
+    variable(0, 'h')
+  )
+);
+
+/**
+ * Two-edge SSS: `AB = DE` and `BC = EF` imply `AB + BC = DE + EF`
+ * (two corresponding side pairs give equal broken-line lengths).
+ */
+export const sssTwoEdgesType: Term = piChain(
+  [
+    distType, Point, Point, Point, Point, Point, Point,
+    eq(Nat, distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B')),
+            distTerm(variable(6, 'dist'), variable(2, 'D'), variable(1, 'E'))),
+    eq(Nat, distTerm(variable(7, 'dist'), variable(5, 'B'), variable(4, 'C')),
+            distTerm(variable(7, 'dist'), variable(2, 'E'), variable(1, 'F'))),
+  ],
+  ['dist', 'A', 'B', 'C', 'D', 'E', 'F', 'h1', 'h2'],
+  eq(Nat,
+    addTerm(distTerm(variable(8, 'dist'), variable(7, 'A'), variable(6, 'B')), distTerm(variable(8, 'dist'), variable(6, 'B'), variable(5, 'C'))),
+    addTerm(distTerm(variable(8, 'dist'), variable(4, 'D'), variable(3, 'E')), distTerm(variable(8, 'dist'), variable(3, 'E'), variable(2, 'F'))))
+);
+
+export const sssTwoEdgesProof: Term = lamChain(
+  [
+    distType, Point, Point, Point, Point, Point, Point,
+    eq(Nat, distTerm(variable(6, 'dist'), variable(5, 'A'), variable(4, 'B')),
+            distTerm(variable(6, 'dist'), variable(2, 'D'), variable(1, 'E'))),
+    eq(Nat, distTerm(variable(7, 'dist'), variable(5, 'B'), variable(4, 'C')),
+            distTerm(variable(7, 'dist'), variable(2, 'E'), variable(1, 'F'))),
+  ],
+  ['dist', 'A', 'B', 'C', 'D', 'E', 'F', 'h1', 'h2'],
+  (() => {
+    const ab = distTerm(variable(8, 'dist'), variable(7, 'A'), variable(6, 'B'));
+    const bc = distTerm(variable(8, 'dist'), variable(6, 'B'), variable(5, 'C'));
+    const de = distTerm(variable(8, 'dist'), variable(4, 'D'), variable(3, 'E'));
+    const ef = distTerm(variable(8, 'dist'), variable(3, 'E'), variable(2, 'F'));
+    // h2 : BC = EF, extended on the left by AB: AB + BC = AB + EF.
+    const p1 = app(app(app(app(addLeftCongrProof, bc), ef), ab), variable(0, 'h2'));
+    // h1 : AB = DE, extended on the right by EF: AB + EF = DE + EF.
+    const p2 = app(app(app(app(addRightCongrProof, ab), de), ef), variable(1, 'h1'));
+    return app(app(app(app(app(transNatProof, addTerm(ab, bc)), addTerm(ab, ef)), addTerm(de, ef)), p1), p2);
+  })()
 );
 
 /* ----------------------------- closed perimeter computations ----------- */
